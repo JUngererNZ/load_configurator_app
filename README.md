@@ -1,5 +1,4 @@
 create a technical readme.md file for this app
-Washed the conversation through DeepSeek to see if it could produce a better-er app than the other attempts.
 
 
 🚛 FML Load Configurator - Technical Documentation
