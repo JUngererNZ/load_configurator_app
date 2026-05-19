@@ -1,0 +1,54 @@
+Step  1: Load Load DE850E0 -> Position: X=0.2m, Y=0.1m -> 6.7t
+Step  2: Load Load DE850E0 -> Position: X=0.2m, Y=0.1m -> 6.7t
+Step  3: Load Load DE660E0 -> Position: X=6.0m, Y=0.1m -> 6.0t
+Step  4: Load Load DE450E0 -> Position: X=0.2m, Y=0.1m -> 4.7t
+Step  5: Load Load DE450E0 -> Position: X=0.2m, Y=0.1m -> 4.7t
+Step  6: Load Load DE450E0 -> Position: X=5.3m, Y=0.1m -> 4.7t
+Step  7: Load Load DE16E0 -> Position: X=10.5m, Y=0.1m -> 0.4t
+Step  8: Load Load DE500GC -> Position: X=0.2m, Y=0.1m -> 3.8t
+Step  9: Load Load DE500GC -> Position: X=0.2m, Y=0.1m -> 3.8t
+Step 10: Load Load GEN-001 -> Position: X=5.2m, Y=0.1m -> 3.7t
+Step 11: Load Load DE33GC -> Position: X=9.9m, Y=0.1m -> 0.8t
+Step 12: Load Load GEN-002 -> Position: X=0.2m, Y=0.1m -> 3.7t
+Step 13: Load Load DE250E0 -> Position: X=0.2m, Y=0.1m -> 2.8t
+Step 14: Load Load DE250E0 -> Position: X=4.4m, Y=0.1m -> 2.8t
+Step 15: Load Load GEN-003 -> Position: X=8.7m, Y=0.1m -> 2.5t
+Step 16: Load Load DE330E0 -> Position: X=0.2m, Y=0.1m -> 2.9t
+Step 17: Load Load DE16E0 -> Position: X=4.4m, Y=0.1m -> 0.4t
+Step 18: Load Load DE150GC -> Position: X=0.2m, Y=0.1m -> 1.9t
+Step 19: Load Load DE150GC -> Position: X=3.8m, Y=0.1m -> 1.9t
+Step 20: Load Load DE150GC -> Position: X=7.4m, Y=0.1m -> 1.9t
+Step 21: Load Load DE220GC -> Position: X=0.2m, Y=0.1m -> 1.9t
+Step 22: Load Load DE33GC -> Position: X=3.8m, Y=0.1m -> 0.8t
+Step 23: Load Load DE220GC -> Position: X=0.2m, Y=0.1m -> 1.9t
+Step 24: Load Load DE220GC -> Position: X=3.8m, Y=0.1m -> 1.9t
+Step 25: Load Load DE220GC -> Position: X=7.4m, Y=0.1m -> 1.9t
+Step 26: Load Load DE110GC -> Position: X=0.2m, Y=0.1m -> 1.2t
+Step 27: Load Load DE110GC -> Position: X=3.2m, Y=0.1m -> 1.2t
+Step 28: Load Load DE110GC -> Position: X=0.2m, Y=0.1m -> 1.2t
+Step 29: Load Load DE110GC -> Position: X=3.2m, Y=0.1m -> 1.2t
+Step 30: Load Load DE110E2 -> Position: X=6.2m, Y=0.1m -> 1.5t
+Step 31: Load Load DE110E2 -> Position: X=9.2m, Y=0.1m -> 1.5t
+Step 32: Load Load DE400GC -> Position: X=0.2m, Y=0.1m -> 2.3t
+Step 33: Load Load DE400GC -> Position: X=3.1m, Y=0.1m -> 2.3t
+Step 34: Load Load DE65GC -> Position: X=0.2m, Y=0.1m -> 1.0t
+Step 35: Load Load DE65GC -> Position: X=2.7m, Y=0.1m -> 1.0t
+Step 36: Load Load DE65GC -> Position: X=5.3m, Y=0.1m -> 1.0t
+Step 37: Load Load DE65GC -> Position: X=7.8m, Y=0.1m -> 1.0t
+Step 38: Load Load DE50GC -> Position: X=0.2m, Y=0.1m -> 0.9t
+Step 39: Load Load DE50GC -> Position: X=2.7m, Y=0.1m -> 0.9t
+Step 40: Load Load DE50GC -> Position: X=0.2m, Y=0.1m -> 0.9t
+Step 41: Load Load DE50GC -> Position: X=2.7m, Y=0.1m -> 0.9t
+Step 42: Load Load DE50GC -> Position: X=5.3m, Y=0.1m -> 0.9t
+Step 43: Load Load DE50GC -> Position: X=7.8m, Y=0.1m -> 0.9t
+Step 44: Load Load DE65GC -> Position: X=0.2m, Y=0.1m -> 1.0t
+Step 45: Load Load DE65GC -> Position: X=2.7m, Y=0.1m -> 1.0t
+Step 46: Load Load DE88GC -> Position: X=0.2m, Y=0.1m -> 1.4t
+Step 47: Load Load DE88GC -> Position: X=2.7m, Y=0.1m -> 1.4t
+Step 48: Load Load DE88GC -> Position: X=5.2m, Y=0.1m -> 1.4t
+Step 49: Load Load DE88GC -> Position: X=7.7m, Y=0.1m -> 1.4t
+
+IMPORTANT SAFETY NOTES
+1. Ensure 20cm gap between all units for lashing
+2. Verify axle loads before departure
+3. All loads must comply with Regulation 240 of Act 93/1996
