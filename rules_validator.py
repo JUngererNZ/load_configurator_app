@@ -2,8 +2,8 @@
 South African National Road Traffic Act (Act 93 of 1996)
 Complete Compliance Validator for Heavy Transport Load Configurator
 
-Version: 2.0 - Fully Compliant
-Last Updated: 2026-05-18
+Version: 2.1 - Added In-Gauge Cargo Classification
+Last Updated: 2026-05-19
 Regulations Covered: 234, 235, 236, 239, 240, 242, 243, 247
 """
 
@@ -21,6 +21,14 @@ class PermitType(Enum):
     GCM_EXEMPTION = "GCM exemption (>56t up to 80t)"
     MULTI_EXEMPTION = "Multiple exemptions - Escort required"
     SUPER_ABNORMAL = "Super abnormal - Route approval + Police escort"
+
+
+class CargoClass(Enum):
+    """Commercial cargo classification for freight forwarding"""
+    IN_GAUGE = "IN-GAUGE"
+    OUT_OF_GAUGE = "OUT-OF-GAUGE (OOG)"
+    ABNORMAL = "ABNORMAL"
+    SUPER_ABNORMAL = "SUPER-ABNORMAL"
 
 
 @dataclass
@@ -146,6 +154,13 @@ class SARoadTrafficValidator:
         self.heavy_duty_tire_capacity_kg = 4000  # For abnormal loads
         self.tires_per_axle = 4  # Dual wheels on drive axles
         
+        # ========== IN-GAUGE CARGO THRESHOLDS (Commercial Classification) ==========
+        # Based on OneLogix Mega industry standards for cost-effective transport
+        self.ingauge_max_height_m = 2.9   # Fits in standard container/high cube
+        self.ingauge_max_width_m = 2.5    # Within 2.55m legal limit with margin
+        self.ingauge_max_item_length_m = 12.0  # Fits in 40ft container
+        self.ingauge_max_mass_kg = 28000  # Standard flatbed payload
+        
         # ========== Provincial Weight Limit Variations ==========
         self.provincial_limits = {
             "WesternCape": {
@@ -167,6 +182,98 @@ class SARoadTrafficValidator:
         self.violations: List[LegalViolation] = []
         self.permits_required: List[PermitRequirement] = []
         
+    # ==================== IN-GAUGE CARGO CLASSIFICATION ====================
+    
+    def classify_cargo(self, items: List) -> Dict:
+        """
+        Classify cargo as In-Gauge, Out-of-Gauge (OOG), or Abnormal.
+        Based on industry standards from OneLogix Mega and SA legal limits.
+        
+        In-Gauge cargo fits within standard container/vehicle dimensions:
+        - Height ≤ 2.9m (fits in high cube container)
+        - Width ≤ 2.5m (within legal limit with margin)
+        - No single item > 12m length (fits in 40ft container)
+        - Total mass ≤ 28t (standard flatbed payload)
+        
+        Out-of-Gauge (OOG) exceeds one or more in-gauge thresholds
+        but remains within legal limits (permits may be required).
+        
+        Abnormal exceeds legal limits (permits always required).
+        
+        Returns:
+            Dict with classification, reasons, and commercial implications
+        """
+        if not items:
+            return {
+                "class": CargoClass.IN_GAUGE,
+                "class_name": "IN-GAUGE",
+                "is_in_gauge": True,
+                "reasons": [],
+                "commercial_note": "Standard rates apply",
+                "fleet_recommendation": "Standard flatbed"
+            }
+        
+        total_height = max((item.height_m for item in items), default=0)
+        total_width = max((item.width_m for item in items), default=0)
+        max_item_length = max((item.length_m for item in items), default=0)
+        total_mass = sum((item.mass_kg for item in items), default=0) / 1000  # tonnes
+        
+        is_ingauge = True
+        reasons = []
+        classification = CargoClass.IN_GAUGE
+        
+        # Check in-gauge thresholds
+        if total_height > self.ingauge_max_height_m:
+            is_ingauge = False
+            reasons.append(f"Height ({total_height:.2f}m) exceeds in-gauge limit of {self.ingauge_max_height_m}m")
+            
+        if total_width > self.ingauge_max_width_m:
+            is_ingauge = False
+            reasons.append(f"Width ({total_width:.2f}m) exceeds in-gauge limit of {self.ingauge_max_width_m}m")
+            
+        if max_item_length > self.ingauge_max_item_length_m:
+            is_ingauge = False
+            reasons.append(f"Item length ({max_item_length:.2f}m) exceeds in-gauge limit of {self.ingauge_max_item_length_m}m")
+            
+        if total_mass > self.ingauge_max_mass_kg / 1000:
+            is_ingauge = False
+            reasons.append(f"Total mass ({total_mass:.1f}t) exceeds in-gauge payload of {self.ingauge_max_mass_kg/1000:.0f}t")
+        
+        # Determine final classification
+        if is_ingauge:
+            classification = CargoClass.IN_GAUGE
+            commercial_note = "✅ Standard rates apply. Can use any standard flatbed fleet."
+            fleet_rec = "Standard flatbed (13.6m x 2.4m)"
+        else:
+            # Check if legal limits are exceeded (abnormal)
+            exceeds_legal_height = total_height > self.max_height_standard_m
+            exceeds_legal_width = total_width > self.max_width_standard_m
+            exceeds_legal_length = max_item_length > self.max_length_semitrailer_m
+            
+            if exceeds_legal_height or exceeds_legal_width or exceeds_legal_length:
+                classification = CargoClass.ABNORMAL
+                commercial_note = "⚠️ ABNORMAL LOAD: Permits required, specialized fleet needed, premium rates apply."
+                fleet_rec = "Abnormal fleet (low-bed / extendable trailer)"
+            else:
+                classification = CargoClass.OUT_OF_GAUGE
+                commercial_note = "💰 OUT-OF-GAUGE (OOG): May require route survey, potential premium rates. Contact operations for quote."
+                fleet_rec = "Step deck or flatbed with overhang kit"
+        
+        return {
+            "class": classification,
+            "class_name": classification.value,
+            "is_in_gauge": is_ingauge,
+            "reasons": reasons,
+            "commercial_note": commercial_note,
+            "fleet_recommendation": fleet_rec,
+            "metrics": {
+                "max_height_m": round(total_height, 2),
+                "max_width_m": round(total_width, 2),
+                "max_item_length_m": round(max_item_length, 2),
+                "total_mass_tons": round(total_mass, 1)
+            }
+        }
+    
     # ==================== REGULATION 234: HEIGHT VALIDATION ====================
     
     def validate_height(self, total_height_m: float, route: str = None) -> Dict:
@@ -557,12 +664,19 @@ class SARoadTrafficValidator:
         
         # Calculate basic metrics
         total_payload_kg = sum(item.mass_kg for item in items)
-        total_height_m = max(item.height_m for item in items)
-        total_width_m = max(item.width_m for item in items)
+        total_height_m = max(item.height_m for item in items) if items else 0
+        total_width_m = max(item.width_m for item in items) if items else 0
         
         # Get axle loads from trailer
-        front_load, rear_load, cog = trailer.calculate_axle_loads()
-        total_mass = total_payload_kg + truck_mass_kg + trailer.trailer_tare_kg
+        if hasattr(trailer, 'calculate_axle_loads'):
+            front_load, rear_load, cog = trailer.calculate_axle_loads()
+        else:
+            front_load, rear_load, cog = 0, 0, 0
+            
+        total_mass = total_payload_kg + truck_mass_kg + getattr(trailer, 'trailer_tare_kg', 6000)
+        
+        # ===== IN-GAUGE CARGO CLASSIFICATION =====
+        commercial_class = self.classify_cargo(items)
         
         # ===== Run all validations =====
         
@@ -599,23 +713,24 @@ class SARoadTrafficValidator:
             ))
         
         # Regulation 236: Length
-        length_result = self.validate_length(trailer.length_m, vehicle_type)
+        trailer_length = getattr(trailer, 'length_m', 13.6)
+        length_result = self.validate_length(trailer_length, vehicle_type)
         if not length_result["compliant"]:
             self.violations.append(LegalViolation(
                 regulation="236",
                 severity="WARNING",
                 message=length_result["message"],
-                current_value=trailer.length_m,
+                current_value=trailer_length,
                 legal_limit=self.max_length_semitrailer_m
             ))
         if length_result.get("permit_required"):
             self.permits_required.append(PermitRequirement(
                 permit_type=length_result["permit_type"],
-                reason=f"Length {trailer.length_m}m exceeds standard limit"
+                reason=f"Length {trailer_length}m exceeds standard limit"
             ))
         
         # Regulation 239: GCM
-        gcm_result = self.validate_gcm(total_payload_kg, truck_mass_kg, trailer.trailer_tare_kg)
+        gcm_result = self.validate_gcm(total_payload_kg, truck_mass_kg, getattr(trailer, 'trailer_tare_kg', 6000))
         if not gcm_result["compliant"]:
             self.violations.append(LegalViolation(
                 regulation="239",
@@ -631,31 +746,40 @@ class SARoadTrafficValidator:
             ))
         
         # Regulation 240: Axle loads
+        axle_config = getattr(trailer, 'axle_configuration', [{"type": "tandem", "axle_count": 2}])
         axle_result = self.validate_axle_loads(
             front_load, rear_load, total_mass,
-            trailer.axle_configuration if hasattr(trailer, 'axle_configuration') else []
+            axle_config
         )
         for violation in axle_result.get("violations", []):
             self.violations.append(violation)
         
         # Regulation 247: Tire loads
-        if hasattr(trailer, 'axle_count'):
-            tire_result = self.validate_tire_loads(rear_load, trailer.axle_count)
-            if not tire_result["compliant"]:
-                self.violations.append(LegalViolation(
-                    regulation="247",
-                    severity="CRITICAL",
-                    message=tire_result["message"],
-                    current_value=tire_result["load_per_tire_kg"],
-                    legal_limit=tire_result["tire_capacity_kg"]
-                ))
+        axle_count = getattr(trailer, 'axle_count', 3)
+        tire_result = self.validate_tire_loads(rear_load, axle_count)
+        if not tire_result["compliant"]:
+            self.violations.append(LegalViolation(
+                regulation="247",
+                severity="CRITICAL",
+                message=tire_result["message"],
+                current_value=tire_result["load_per_tire_kg"],
+                legal_limit=tire_result["tire_capacity_kg"]
+            ))
         
         # ===== Generate summary =====
         audit_result = {
             "compliant": len([v for v in self.violations if v.severity == "CRITICAL"]) == 0,
-            "critical_violations": [v for v in self.violations if v.severity == "CRITICAL"],
-            "warnings": [v for v in self.violations if v.severity == "WARNING"],
-            "permits_required": self.permits_required,
+            "critical_violations": [vars(v) for v in self.violations if v.severity == "CRITICAL"],
+            "warnings": [vars(v) for v in self.violations if v.severity == "WARNING"],
+            "permits_required": [{"type": p.permit_type.value, "reason": p.reason} for p in self.permits_required],
+            "commercial_classification": {
+                "class": commercial_class["class_name"],
+                "is_in_gauge": commercial_class["is_in_gauge"],
+                "reasons": commercial_class["reasons"],
+                "commercial_note": commercial_class["commercial_note"],
+                "fleet_recommendation": commercial_class["fleet_recommendation"],
+                "metrics": commercial_class["metrics"]
+            },
             "summary": {
                 "total_payload_tons": round(total_payload_kg / 1000, 1),
                 "total_gcm_tons": round(gcm_result["gcm_tons"], 1),
@@ -663,7 +787,7 @@ class SARoadTrafficValidator:
                 "rear_load_kg": round(rear_load, 0),
                 "height_m": total_height_m,
                 "width_m": total_width_m,
-                "length_m": trailer.length_m
+                "length_m": trailer_length
             },
             "recommendations": self._generate_recommendations()
         }
@@ -701,6 +825,21 @@ class SARoadTrafficValidator:
         print(f"Act 93 of 1996 | Regulations 234-247 | Province: {self.province}")
         print("-"*70)
         
+        # ===== IN-GAUGE CARGO SECTION =====
+        commercial = audit_result.get("commercial_classification", {})
+        print("\n🏷️ COMMERCIAL CLASSIFICATION (In-Gauge / OOG):")
+        if commercial.get("is_in_gauge", False):
+            print(f"   ✅ {commercial.get('class', 'IN-GAUGE')}")
+            print(f"   💰 {commercial.get('commercial_note', 'Standard rates apply')}")
+        else:
+            print(f"   ⚠️ {commercial.get('class', 'OUT-OF-GAUGE')}")
+            print(f"   💰 {commercial.get('commercial_note', 'Premium rates apply')}")
+            if commercial.get("reasons"):
+                print("   Reasons:")
+                for reason in commercial["reasons"]:
+                    print(f"     - {reason}")
+        print(f"   🚛 Fleet Recommendation: {commercial.get('fleet_recommendation', 'Standard flatbed')}")
+        
         print("\n📊 LOAD SUMMARY:")
         print(f"   Total Payload: {audit_result['summary']['total_payload_tons']} tons")
         print(f"   Gross Combination Mass: {audit_result['summary']['total_gcm_tons']} tons")
@@ -711,20 +850,18 @@ class SARoadTrafficValidator:
         if audit_result["critical_violations"]:
             print("\n❌ CRITICAL VIOLATIONS (DO NOT DEPART):")
             for v in audit_result["critical_violations"]:
-                print(f"   • Reg {v.regulation}: {v.message}")
+                print(f"   • Reg {v['regulation']}: {v['message']}")
         
         if audit_result["warnings"]:
             print("\n⚠️ WARNINGS:")
             for v in audit_result["warnings"]:
-                print(f"   • Reg {v.regulation}: {v.message}")
+                print(f"   • Reg {v['regulation']}: {v['message']}")
         
         if audit_result["permits_required"]:
             print("\n📋 PERMITS REQUIRED (Section 81):")
             for p in audit_result["permits_required"]:
-                print(f"   • {p.permit_type.value}")
-                print(f"     Reason: {p.reason}")
-                print(f"     Authority: {p.authority}")
-                print(f"     Processing: ±{p.estimated_processing_days} days")
+                print(f"   • {p['type']}")
+                print(f"     Reason: {p['reason']}")
         
         if audit_result["recommendations"]:
             print("\n💡 RECOMMENDATIONS:")
@@ -732,13 +869,15 @@ class SARoadTrafficValidator:
                 print(f"   • {r}")
         
         print("\n" + "="*70)
-        if audit_result["compliant"]:
-            print("✅ VERDICT: LEGALLY COMPLIANT - Safe to depart with required permits")
+        if audit_result["compliant"] and commercial.get("is_in_gauge", False):
+            print("✅ VERDICT: IN-GAUGE & LEGALLY COMPLIANT - Standard rates, safe to depart")
+        elif audit_result["compliant"] and not commercial.get("is_in_gauge", True):
+            print("⚠️ VERDICT: OUT-OF-GAUGE - Legal but premium rates apply, obtain permit if required")
         else:
             print("🚨 VERDICT: NON-COMPLIANT - DO NOT DEPART until violations resolved")
         print("="*70 + "\n")
         
-        return audit_result["compliant"]
+        return audit_result["compliant"] and not audit_result["critical_violations"]
 
 
 # ==================== HELPER FUNCTION FOR INTEGRATION ====================
@@ -763,14 +902,17 @@ def quick_legal_check(trailer, items, route=None) -> Dict:
 # ==================== UNIT TESTS ====================
 
 if __name__ == "__main__":
-    # Test the validator
+    # Run legal compliance tests
     print("Running legal compliance tests...\n")
     
     validator = SARoadTrafficValidator(province="WesternCape")
     
-    # Test 1: Standard legal load
-    print("TEST 1: Standard legal load")
-    test_items = [type('Item', (), {'mass_kg': 5000, 'height_m': 3.5, 'width_m': 2.4})()]
+    # Test 1: Standard legal load (should be IN-GAUGE)
+    print("TEST 1: Standard legal load (IN-GAUGE expected)")
+    test_items = []
+    test_item = type('Item', (), {'mass_kg': 5000, 'height_m': 2.8, 'width_m': 2.4, 'length_m': 6.0})()
+    test_items.append(test_item)
+    
     test_trailer = type('Trailer', (), {
         'length_m': 13.6, 
         'calculate_axle_loads': lambda: (6000, 12000, 6.8),
@@ -781,11 +923,28 @@ if __name__ == "__main__":
     
     result = validator.full_legal_audit(test_trailer, test_items, route="Standard Highway")
     assert result["compliant"] == True, "Standard load should be compliant"
+    assert result["commercial_classification"]["is_in_gauge"] == True, "Standard load should be IN-GAUGE"
+    print("✓ Test 1 passed: IN-GAUGE classification correct\n")
     
-    # Test 2: Over-height load
-    print("\nTEST 2: Over-height load (4.5m)")
-    test_items_overheight = [type('Item', (), {'mass_kg': 5000, 'height_m': 4.5, 'width_m': 2.4})()]
-    result2 = validator.full_legal_audit(test_trailer, test_items_overheight)
-    assert result2["permits_required"] is not None, "Should require permit for over-height"
+    # Test 2: Out-of-Gauge load (oversized but legal)
+    print("TEST 2: Out-of-Gauge load (OOG expected)")
+    test_items_oog = []
+    oog_item = type('Item', (), {'mass_kg': 5000, 'height_m': 3.5, 'width_m': 2.5, 'length_m': 8.0})()
+    test_items_oog.append(oog_item)
+    
+    result2 = validator.full_legal_audit(test_trailer, test_items_oog)
+    assert result2["commercial_classification"]["is_in_gauge"] == False, "Oversized should be OOG"
+    print("✓ Test 2 passed: OOG classification correct\n")
+    
+    # Test 3: Over-height load (requires permit)
+    print("TEST 3: Over-height load (Abnormal expected)")
+    test_items_abnormal = []
+    abnormal_item = type('Item', (), {'mass_kg': 5000, 'height_m': 4.5, 'width_m': 2.4, 'length_m': 6.0})()
+    test_items_abnormal.append(abnormal_item)
+    
+    result3 = validator.full_legal_audit(test_trailer, test_items_abnormal)
+    assert result3["commercial_classification"]["class"] == "ABNORMAL", "Over-height should be ABNORMAL"
+    assert len(result3["permits_required"]) > 0, "Should require permits"
+    print("✓ Test 3 passed: Abnormal classification correct\n")
     
     print("\n✅ All tests passed!")
