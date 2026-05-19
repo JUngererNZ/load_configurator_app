@@ -18,44 +18,6 @@ from visualizer_2d import create_top_down_view, create_side_view
 from exporter import export_manifest, print_loading_instructions
 from trailer_library import SuperlinkTrailer, TRAILER_TYPES
 
-# Replace the available trailer types section with:
-
-print("\n   Available trailer types:")
-print("   1. Flatbed Standard (13.6m, 28t payload, 2 axles)")
-print("   2. Low-Loader (13.6m, 35t payload, 2 axles)")
-print("   3. TRI-AXLE Flatbed (13.6m, 30t payload, 3 axles)")  # NEW
-print("   4. TRI-AXLE Low-Loader (13.6m, 35t payload, 3 axles)")  # NEW
-print("   5. Abnormal (18.0m, 50t payload, requires permit)")
-print("   6. SUPERLINK (6m + 12m, 34t payload)")
-print("   7. SUPERLINK Tri-Axle (6m + 12m tri-axle rear, 34t)")  # NEW
-print("   8. INTERLINK (6m + 6m, 34t payload)")
-
-choice = input("\n   Select (1-8) [default: 1]: ").strip()
-
-if choice == "2":
-    trailer_type = "Low-Loader"
-    is_superlink = False
-elif choice == "3":
-    trailer_type = "Tri-Axle Flatbed"
-    is_superlink = False
-elif choice == "4":
-    trailer_type = "Tri-Axle Low-Loader"
-    is_superlink = False
-elif choice == "5":
-    trailer_type = "Abnormal (Extendable)"
-    is_superlink = False
-elif choice == "6":
-    trailer_type = "Superlink (6m + 12m)"
-    is_superlink = True
-elif choice == "7":
-    trailer_type = "Tri-Axle Superlink"
-    is_superlink = True
-elif choice == "8":
-    trailer_type = "Interlink (6m + 6m)"
-    is_superlink = True
-else:
-    trailer_type = "Flatbed Standard"
-    is_superlink = False
 
 def find_input_file():
     """Automatically find the consignment file in current directory"""
@@ -153,8 +115,9 @@ def load_items_from_file(filepath):
         
         print(f"✅ Loaded {len(items)} items")
         print(f"   Total mass: {sum(i.mass_kg for i in items)/1000:.1f} tonnes")
-        print(f"   Longest item: {items[0].consignment} ({items[0].length_m:.2f}m)" if items else "")
-        print(f"   Shortest item: {items[-1].consignment} ({items[-1].length_m:.2f}m)" if items else "")
+        if items:
+            print(f"   Longest item: {items[0].consignment} ({items[0].length_m:.2f}m)")
+            print(f"   Shortest item: {items[-1].consignment} ({items[-1].length_m:.2f}m)")
         
         return items
     
@@ -172,7 +135,7 @@ def safe_text(text):
 def pack_superlink(superlink, items):
     """
     Pack items into a Superlink using best-fit algorithm.
-    Returns: (packed_items, remaining_items)
+    Returns: (packed_items, remaining_items, front_mass, rear_mass)
     """
     # Sort items by length (largest first) for efficient packing
     items_to_pack = sorted(items, key=lambda x: -x.length_m)
@@ -196,13 +159,11 @@ def pack_superlink(superlink, items):
         for space in front_space[:]:
             if space['end'] - space['start'] >= item.length_m:
                 if front_mass + item.mass_kg <= superlink.front["max_payload_kg"]:
-                    # Place item
                     item.x_pos = space['start']
                     item.y_pos = 0.15
                     front_items.append(item)
                     front_mass += item.mass_kg
                     
-                    # Update space
                     new_start = space['start'] + item.length_m + 0.2
                     if new_start < space['end']:
                         space['start'] = new_start
@@ -271,35 +232,49 @@ def run_master_configurator(input_file=None):
     total_mass_kg = sum(item.mass_kg for item in items)
     total_mass_tons = total_mass_kg / 1000
     
-    # ===== STEP 2: Select Trailer Type =====
+    # ===== STEP 2: Select Trailer Type (UPDATED with Tri-Axle options) =====
     print("\n" + "-"*50)
     print("STEP 2: Configuring Trailers")
     print("-"*50)
     
     print("\n   Available trailer types:")
-    print("   1. Flatbed Standard (13.6m, 28t payload)")
-    print("   2. Low-Loader (13.6m, 35t payload)")
-    print("   3. Abnormal (18.0m, 50t payload, requires permit)")
-    print("   4. SUPERLINK (6m + 12m, 34t payload)")
-    print("   5. INTERLINK (6m + 6m, 34t payload)")
+    print("   1. Flatbed Standard (13.6m, 28t payload, 2 axles)")
+    print("   2. Low-Loader (13.6m, 35t payload, 2 axles)")
+    print("   3. TRI-AXLE Flatbed (13.6m, 30t payload, 3 axles)")
+    print("   4. TRI-AXLE Low-Loader (13.6m, 35t payload, 3 axles)")
+    print("   5. Abnormal (18.0m, 50t payload, requires permit)")
+    print("   6. SUPERLINK (6m + 12m, 34t payload)")
+    print("   7. SUPERLINK Tri-Axle (6m + 12m tri-axle rear, 34t)")
+    print("   8. INTERLINK (6m + 6m, 34t payload)")
     
-    choice = input("\n   Select (1-5) [default: 1]: ").strip()
+    choice = input("\n   Select (1-8) [default: 1]: ").strip()
     
     if choice == "2":
         trailer_type = "Low-Loader"
         is_superlink = False
     elif choice == "3":
-        trailer_type = "Abnormal"
+        trailer_type = "Tri-Axle Flatbed"
         is_superlink = False
     elif choice == "4":
+        trailer_type = "Tri-Axle Low-Loader"
+        is_superlink = False
+    elif choice == "5":
+        trailer_type = "Abnormal (Extendable)"
+        is_superlink = False
+    elif choice == "6":
         trailer_type = "Superlink (6m + 12m)"
         is_superlink = True
-    elif choice == "5":
+    elif choice == "7":
+        trailer_type = "Tri-Axle Superlink"
+        is_superlink = True
+    elif choice == "8":
         trailer_type = "Interlink (6m + 6m)"
         is_superlink = True
     else:
         trailer_type = "Flatbed Standard"
         is_superlink = False
+    
+    print(f"\n   Selected: {trailer_type}")
     
     # ===== STEP 3: Distribute Items =====
     print("\n" + "-"*50)
@@ -347,13 +322,31 @@ def run_master_configurator(input_file=None):
             print(f"   Remaining mass: {sum(i.mass_kg for i in remaining_items)/1000:.1f}t")
         
     else:
-        # Handle standard trailers (simplified for now)
-        specs = {"Flatbed Standard": 28000, "Low-Loader": 35000, "Abnormal": 50000}
+        # Handle standard single trailers (including Tri-Axle)
+        specs = {
+            "Flatbed Standard": 28000,
+            "Low-Loader": 35000,
+            "Tri-Axle Flatbed": 30000,
+            "Tri-Axle Low-Loader": 35000,
+            "Abnormal (Extendable)": 50000
+        }
+        
+        # Get rear axle limit based on trailer type
+        rear_axle_limits = {
+            "Flatbed Standard": 18000,
+            "Low-Loader": 18000,
+            "Tri-Axle Flatbed": 27000,
+            "Tri-Axle Low-Loader": 27000,
+            "Abnormal (Extendable)": 30000
+        }
+        
         payload_per_trailer = specs.get(trailer_type, 28000)
+        rear_axle_limit = rear_axle_limits.get(trailer_type, 18000)
         num_trailers = max(1, int(total_mass_kg / payload_per_trailer) + 1)
         num_trailers = min(num_trailers, 5)
         
         print(f"\n   Using {num_trailers} x {trailer_type} trailer(s)")
+        print(f"   Each trailer rear axle limit: {rear_axle_limit/1000:.0f}t")
         
         from optimizer_engine import Trailer
         
@@ -362,28 +355,37 @@ def run_master_configurator(input_file=None):
             trailer = Trailer(
                 name=f"{trailer_type}_{i+1}",
                 type_name=trailer_type,
-                length_m=13.6 if trailer_type != "Abnormal" else 18.0,
-                width_m=2.4 if trailer_type != "Low-Loader" else 2.8,
-                deck_height_m=1.2,
+                length_m=13.6 if "Abnormal" not in trailer_type else 18.0,
+                width_m=2.8 if "Low-Loader" in trailer_type else 2.4,
+                deck_height_m=0.8 if "Low-Loader" in trailer_type else 1.2,
                 max_payload_kg=payload_per_trailer,
-                max_rear_axle_kg=18000,
-                max_kingpin_kg=12000,
+                max_rear_axle_kg=rear_axle_limit,
+                max_kingpin_kg=12000 if "Tri-Axle" not in trailer_type else 15000,
                 wheelbase_m=10.5,
-                trailer_tare_kg=6000
+                trailer_tare_kg=7000 if "Tri-Axle" in trailer_type else 6000
             )
+            # Add axle configuration for tri-axle
+            if "Tri-Axle" in trailer_type:
+                trailer.axle_configuration = [
+                    {"type": "steering", "axle_count": 1},
+                    {"type": "triaxle", "axle_count": 3}
+                ]
             trailers.append(trailer)
         
-        # Simple distribution for standard trailers
+        # Distribute items to standard trailers
         items_sorted = sorted(items, key=lambda x: -x.length_m)
         for t_idx, trailer in enumerate(trailers):
             current_x = 0.2
             for item in items_sorted[t_idx::num_trailers]:
                 if current_x + item.length_m <= trailer.length_m:
                     if trailer.total_mass_kg + item.mass_kg <= trailer.max_payload_kg:
-                        item.x_pos = current_x
-                        item.y_pos = 0.15
-                        trailer.add_item(item, current_x, 0.15)
-                        current_x += item.length_m + 0.2
+                        # Also check rear axle limit
+                        estimated_rear_load = (trailer.total_mass_kg + item.mass_kg) * 0.7
+                        if estimated_rear_load <= trailer.max_rear_axle_kg:
+                            item.x_pos = current_x
+                            item.y_pos = 0.15
+                            trailer.add_item(item, current_x, 0.15)
+                            current_x += item.length_m + 0.2
         
         trailers = [t for t in trailers if t.items]
     
@@ -415,7 +417,7 @@ def run_master_configurator(input_file=None):
     print("-"*50)
     
     import matplotlib.pyplot as plt
-    plt.rcParams['font.sans-serif'] = ['Arial']  # Use Arial to avoid emoji issues
+    plt.rcParams['font.sans-serif'] = ['Arial']
     
     for trailer in trailers:
         try:
@@ -477,9 +479,11 @@ def run_master_configurator(input_file=None):
     print("\n" + "="*70)
     print("MASTER PIPELINE COMPLETE")
     print("="*70)
-    print(f"\n   Total Superlinks used: {len(export_trailers)}")
+    print(f"\n   Total units used: {len(export_trailers)}")
     print(f"   Total items placed: {sum(len(t) for t in export_items_by_trailer)} / {len(items)}")
-    print(f"   Total mass placed: {sum(t.total_mass_kg if hasattr(t, 'total_mass_kg') else sum(i.mass_kg for i in t.items) for t in export_trailers)/1000:.1f} / {total_mass_tons:.1f} tonnes")
+    if export_trailers:
+        total_placed_mass = sum(t.total_mass_kg if hasattr(t, 'total_mass_kg') else sum(i.mass_kg for i in t.items) for t in export_trailers) / 1000
+        print(f"   Total mass placed: {total_placed_mass:.1f} / {total_mass_tons:.1f} tonnes")
     print("="*70)
     
     return True
