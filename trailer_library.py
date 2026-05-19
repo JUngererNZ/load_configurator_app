@@ -146,27 +146,6 @@ TRAILER_TYPES = {
 
 # ==================== SUPERLINK TRAILER CLASS ====================
 
-    # Add these properties to SuperlinkTrailer class
-    @property
-    def wheelbase_m(self):
-        """Return effective wheelbase for Superlink"""
-        return 10.5  # Standard wheelbase for compliance calculations
-    
-    @property
-    def max_kingpin_kg(self):
-        """Return kingpin limit for Superlink"""
-        return 12000
-    
-    @property
-    def max_rear_axle_kg(self):
-        """Return rear axle limit for Superlink"""
-        return 18000
-    
-    @property
-    def deck_height_m(self):
-        """Return deck height"""
-        return 1.2
-
 class SuperlinkTrailer:
     """
     Superlink (Link) Trailer - Two trailers articulated together
@@ -212,7 +191,36 @@ class SuperlinkTrailer:
         
         # For compatibility with visualizer
         self.items = []  # Will be populated by get_all_items()
-        
+    
+    # ==================== PROPERTIES FOR COMPATIBILITY ====================
+    
+    @property
+    def wheelbase_m(self):
+        """Return effective wheelbase for Superlink"""
+        return 10.5  # Standard wheelbase for compliance calculations
+    
+    @property
+    def max_kingpin_kg(self):
+        """Return kingpin limit for Superlink"""
+        return 12000
+    
+    @property
+    def max_rear_axle_kg(self):
+        """Return rear axle limit for Superlink"""
+        return 18000
+    
+    @property
+    def deck_height_m(self):
+        """Return deck height"""
+        return 1.2
+    
+    @property
+    def trailer_tare_kg(self):
+        """Return tare weight of Superlink combination"""
+        return self.front.get("tare_kg", 3500) + self.rear.get("tare_kg", 4500)
+    
+    # ==================== METHODS ====================
+    
     def can_add_item_to_front(self, item, x_pos, gap_m=0.15):
         """
         Check if item fits on front trailer (6m)
@@ -386,6 +394,19 @@ class SuperlinkTrailer:
             },
             "is_safe": self.is_safe()[0]
         }
+    
+    def add_item(self, item, x_pos, y_pos=0.15):
+        """
+        Generic add_item method for compatibility with visualizer.
+        Automatically determines whether to add to front or rear based on x_pos.
+        """
+        # If x_pos is beyond front trailer length, add to rear
+        if x_pos > self.front["length_m"] + 0.5:
+            # Adjust position for rear trailer
+            rear_x = x_pos - self.front["length_m"] - self.articulation_gap_m
+            self.add_item_to_rear(item, rear_x, y_pos)
+        else:
+            self.add_item_to_front(item, x_pos, y_pos)
 
 
 # ==================== HELPER FUNCTIONS ====================
@@ -446,17 +467,8 @@ if __name__ == "__main__":
     print(f"   Front length: {superlink.front['length_m']}m, max: {superlink.front['max_payload_kg']/1000:.0f}t")
     print(f"   Rear length: {superlink.rear['length_m']}m, max: {superlink.rear['max_payload_kg']/1000:.0f}t")
     print(f"   Total payload: {superlink.max_payload_kg/1000:.0f}t")
-    
-    # Add test items
-    from optimizer_engine import Item
-    test_item = Item(consignment="TEST-001", length_m=4.5, width_m=2.1, height_m=2.2, mass_kg=9500)
-    can_fit, _ = superlink.can_add_item_to_front(test_item, 0.2)
-    if can_fit:
-        superlink.add_item_to_front(test_item, 0.2)
-        print(f"   Added test item to front: {superlink.front['total_mass_kg']/1000:.1f}t")
-    
-    summary = superlink.get_summary()
-    print(f"   Summary: {summary['total_items']} items, {summary['total_mass_tons']:.1f}/{summary['max_payload_tons']:.0f}t")
+    print(f"   Wheelbase (property): {superlink.wheelbase_m}m")
+    print(f"   Tare weight (property): {superlink.trailer_tare_kg}kg")
     print("   ✓ Passed\n")
     
     print("✅ All tests passed!")

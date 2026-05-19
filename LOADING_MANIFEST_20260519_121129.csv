@@ -1,0 +1,14 @@
+Trailer,Trailer_Type,Loading_Step,Consignment,Mass_kg,Mass_t,Length_m,Width_m,Height_m,X_Position_m,Y_Position_m,Rotated_90deg,Front_Axle_Load_kg,Rear_Axle_Load_kg,Safety_Status,Violations,Cargo_Classification,OOG_Reasons,Commercial_Note
+Superlink_1,Superlink (6m + 12m),1,DE850E0,6690.0,6.69,5.572,2.17,2.398,0.2,0.15,False,2007.0,9518.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_1,Superlink (6m + 12m),2,DE850E0,6690.0,6.69,5.572,2.17,2.398,0.2,0.15,False,2007.0,9518.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_1,Superlink (6m + 12m),3,DE660E0,5952.0,5.95,5.32,1.92,2.29,5.97,0.15,False,2007.0,9518.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_2,Superlink (6m + 12m),4,DE500GC,3808.0,3.81,4.77,1.63,2.36,0.2,0.15,False,1142.0,5874.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_2,Superlink (6m + 12m),5,GEN-001,3700.0,3.7,4.5,2.1,2.2,0.2,0.15,False,1142.0,5874.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_2,Superlink (6m + 12m),6,GEN-002,3700.0,3.7,4.5,2.1,2.2,4.9,0.15,False,1142.0,5874.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_2,Superlink (6m + 12m),7,DE16E0,447.0,0.45,1.5,0.62,1.115,9.6,0.15,False,1142.0,5874.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_3,Superlink (6m + 12m),8,DE88GC,1358.0,1.36,2.3,1.12,1.62,0.2,0.15,False,815.0,3847.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_3,Superlink (6m + 12m),9,DE88GC,1358.0,1.36,2.3,1.12,1.62,2.7,0.15,False,815.0,3847.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_3,Superlink (6m + 12m),10,DE88GC,1358.0,1.36,2.3,1.12,1.62,0.2,0.15,False,815.0,3847.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_3,Superlink (6m + 12m),11,DE88GC,1358.0,1.36,2.3,1.12,1.62,2.7,0.15,False,815.0,3847.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_3,Superlink (6m + 12m),12,DE110GC,1196.0,1.2,2.8,1.05,1.68,5.2,0.15,False,815.0,3847.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_3,Superlink (6m + 12m),13,DE110GC,1196.0,1.2,2.8,1.05,1.68,8.2,0.15,False,815.0,3847.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
