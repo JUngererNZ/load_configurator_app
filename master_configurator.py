@@ -136,12 +136,15 @@ def safe_text(text):
 def pack_superlink(superlink, items):
     """
     Pack items into a Superlink using best-fit algorithm.
+    Prevents overlapping placements.
     Returns: (packed_items, remaining_items, front_mass, rear_mass)
     """
+    # Sort items by length (largest first) for efficient packing
     items_to_pack = sorted(items, key=lambda x: -x.length_m)
     
-    front_space = [{'start': 0.2, 'end': superlink.front["length_m"]}]
-    rear_space = [{'start': 0.2, 'end': superlink.rear["length_m"]}]
+    # Track space on each trailer as a list of occupied segments
+    front_occupied = []  # List of (start, end) occupied segments
+    rear_occupied = []   # List of (start, end) occupied segments
     
     front_items = []
     rear_items = []
@@ -151,51 +154,86 @@ def pack_superlink(superlink, items):
     packed_items = []
     remaining = []
     
+    # Helper function to find available space
+    def find_space(occupied, trailer_length, item_length):
+        """Find first available gap that fits item_length"""
+        if not occupied:
+            # No items yet, start at 0.2m
+            if 0.2 + item_length <= trailer_length:
+                return 0.2
+            return None
+        
+        # Check space before first item
+        first_start = occupied[0][0]
+        if 0.2 + item_length <= first_start:
+            return 0.2
+        
+        # Check spaces between items
+        for i in range(len(occupied) - 1):
+            gap_start = occupied[i][1] + 0.2
+            gap_end = occupied[i + 1][0]
+            if gap_start + item_length <= gap_end:
+                return gap_start
+        
+        # Check space after last item
+        last_end = occupied[-1][1]
+        if last_end + 0.2 + item_length <= trailer_length:
+            return last_end + 0.2
+        
+        return None
+    
+    # Helper function to add occupied space
+    def add_occupied(occupied, start, end):
+        """Add occupied segment and merge if adjacent"""
+        occupied.append((start, end))
+        occupied.sort()
+        
+        # Merge overlapping segments
+        merged = []
+        for seg in occupied:
+            if not merged:
+                merged.append(list(seg))
+            elif seg[0] <= merged[-1][1] + 0.05:
+                merged[-1][1] = max(merged[-1][1], seg[1])
+            else:
+                merged.append(list(seg))
+        
+        return [tuple(m) for m in merged]
+    
     for item in items_to_pack:
         placed = False
         
         # Try front trailer first
-        for space in front_space[:]:
-            if space['end'] - space['start'] >= item.length_m:
-                if front_mass + item.mass_kg <= superlink.front["max_payload_kg"]:
-                    item.x_pos = space['start']
-                    item.y_pos = 0.15
-                    front_items.append(item)
-                    front_mass += item.mass_kg
-                    
-                    new_start = space['start'] + item.length_m + 0.2
-                    if new_start < space['end']:
-                        space['start'] = new_start
-                    else:
-                        front_space.remove(space)
-                    
-                    packed_items.append(item)
-                    placed = True
-                    break
+        front_space = find_space(front_occupied, superlink.front["length_m"], item.length_m)
+        if front_space is not None:
+            if front_mass + item.mass_kg <= superlink.front["max_payload_kg"]:
+                item.x_pos = front_space
+                item.y_pos = 0.15
+                item.trailer_section = "front"
+                front_items.append(item)
+                front_mass += item.mass_kg
+                front_occupied = add_occupied(front_occupied, front_space, front_space + item.length_m)
+                packed_items.append(item)
+                placed = True
         
         if not placed:
             # Try rear trailer
-            for space in rear_space[:]:
-                if space['end'] - space['start'] >= item.length_m:
-                    if rear_mass + item.mass_kg <= superlink.rear["max_payload_kg"]:
-                        item.x_pos = space['start']
-                        item.y_pos = 0.15
-                        rear_items.append(item)
-                        rear_mass += item.mass_kg
-                        
-                        new_start = space['start'] + item.length_m + 0.2
-                        if new_start < space['end']:
-                            space['start'] = new_start
-                        else:
-                            rear_space.remove(space)
-                        
-                        packed_items.append(item)
-                        placed = True
-                        break
+            rear_space = find_space(rear_occupied, superlink.rear["length_m"], item.length_m)
+            if rear_space is not None:
+                if rear_mass + item.mass_kg <= superlink.rear["max_payload_kg"]:
+                    item.x_pos = rear_space
+                    item.y_pos = 0.15
+                    item.trailer_section = "rear"
+                    rear_items.append(item)
+                    rear_mass += item.mass_kg
+                    rear_occupied = add_occupied(rear_occupied, rear_space, rear_space + item.length_m)
+                    packed_items.append(item)
+                    placed = True
         
         if not placed:
             remaining.append(item)
     
+    # Add items to superlink
     for item in front_items:
         superlink.add_item_to_front(item, item.x_pos)
     for item in rear_items:
@@ -239,20 +277,13 @@ def pack_standard_trailer(trailer, items):
 
 
 def optimize_trailer_selection(items, verbose=True):
-    """
-    Try ALL trailer configurations and find the one that uses the FEWEST trailers.
-    Tests both Superlink and Standard trailer combinations.
-    """
+    """Try ALL trailer configurations and find the one that uses the FEWEST trailers."""
     results = []
     
-    # Define trailer configurations to test
     trailer_configs = [
-        # Superlink configurations (each counts as 1 unit but has 2 decks)
         {"name": "Superlink (6m + 12m)", "type": "superlink", "payload_kg": 34000, "max_units": 10},
         {"name": "Tri-Axle Superlink", "type": "superlink", "payload_kg": 34000, "max_units": 10},
         {"name": "Interlink (6m + 6m)", "type": "superlink", "payload_kg": 34000, "max_units": 10},
-        
-        # Standard trailer configurations
         {"name": "Tri-Axle Flatbed", "type": "standard", "payload_kg": 30000, "max_units": 15},
         {"name": "Tri-Axle Low-Loader", "type": "standard", "payload_kg": 35000, "max_units": 15},
         {"name": "Flatbed Standard", "type": "standard", "payload_kg": 28000, "max_units": 15},
@@ -267,7 +298,6 @@ def optimize_trailer_selection(items, verbose=True):
             print(f"\n   Testing: {config['name']}...", end=" ")
         
         if config["type"] == "superlink":
-            # Test Superlink
             remaining_items = items.copy()
             units_used = 0
             
@@ -298,12 +328,10 @@ def optimize_trailer_selection(items, verbose=True):
                 print(f"{units_used} unit(s), {placed_mass/1000:.1f}t placed ({utilization:.1f}%)")
                 
         else:
-            # Test standard trailer
             remaining_items = items.copy()
             units_used = 0
             
             while remaining_items and units_used < config["max_units"]:
-                from optimizer_engine import Trailer
                 trailer = Trailer(
                     name=f"Test_{units_used+1}",
                     type_name=config["name"],
@@ -341,10 +369,108 @@ def optimize_trailer_selection(items, verbose=True):
             if verbose:
                 print(f"{units_used} unit(s), {placed_mass/1000:.1f}t placed ({utilization:.1f}%)")
     
-    # Sort results: Fewest units first, then highest utilization
     results.sort(key=lambda x: (x["units"], -x["utilization"]))
-    
     return results
+
+
+def manual_selection_mode(items, total_mass_tons):
+    """Original manual selection mode"""
+    print("\n" + "-"*50)
+    print("MANUAL TRAILER SELECTION")
+    print("-"*50)
+    
+    print("\n   Available trailer types:")
+    print("   1. Flatbed Standard (13.6m, 28t payload, 2 axles)")
+    print("   2. Low-Loader (13.6m, 35t payload, 2 axles)")
+    print("   3. TRI-AXLE Flatbed (13.6m, 30t payload, 3 axles)")
+    print("   4. TRI-AXLE Low-Loader (13.6m, 35t payload, 3 axles)")
+    print("   5. Abnormal (18.0m, 50t payload, requires permit)")
+    print("   6. SUPERLINK (6m + 12m, 34t payload)")
+    print("   7. SUPERLINK Tri-Axle (6m + 12m tri-axle rear, 34t)")
+    print("   8. INTERLINK (6m + 6m, 34t payload)")
+    
+    choice = input("\n   Select (1-8) [default: 1]: ").strip()
+    
+    if choice == "2":
+        trailer_type = "Low-Loader"
+        is_superlink = False
+    elif choice == "3":
+        trailer_type = "Tri-Axle Flatbed"
+        is_superlink = False
+    elif choice == "4":
+        trailer_type = "Tri-Axle Low-Loader"
+        is_superlink = False
+    elif choice == "5":
+        trailer_type = "Abnormal (Extendable)"
+        is_superlink = False
+    elif choice == "6":
+        trailer_type = "Superlink (6m + 12m)"
+        is_superlink = True
+    elif choice == "7":
+        trailer_type = "Tri-Axle Superlink"
+        is_superlink = True
+    elif choice == "8":
+        trailer_type = "Interlink (6m + 6m)"
+        is_superlink = True
+    else:
+        trailer_type = "Flatbed Standard"
+        is_superlink = False
+    
+    print(f"\n   Selected: {trailer_type}")
+    
+    if is_superlink:
+        payload_per_unit = 34
+        num_units = max(1, int(total_mass_tons / payload_per_unit) + 1)
+        num_units = min(num_units, 10)
+        print(f"\n   Estimated units needed: {num_units}")
+        
+        all_superlinks = []
+        remaining_items = items.copy()
+        
+        for sl_idx in range(num_units):
+            if not remaining_items:
+                break
+            superlink = SuperlinkTrailer(name=f"Superlink_{sl_idx+1}", config_type=trailer_type)
+            packed, remaining, front_mass, rear_mass = pack_superlink(superlink, remaining_items)
+            if packed:
+                all_superlinks.append(superlink)
+                remaining_items = remaining
+                print(f"\n   {superlink.name}: Front: {len(superlink.front['items'])} items ({front_mass/1000:.1f}t), Rear: {len(superlink.rear['items'])} items ({rear_mass/1000:.1f}t)")
+        
+        return all_superlinks
+        
+    else:
+        specs = {"Flatbed Standard": 28, "Low-Loader": 35, "Tri-Axle Flatbed": 30, "Tri-Axle Low-Loader": 35, "Abnormal (Extendable)": 50}
+        payload_per_unit = specs.get(trailer_type, 28)
+        num_units = max(1, int(total_mass_tons / payload_per_unit) + 1)
+        num_units = min(num_units, 10)
+        print(f"\n   Estimated units needed: {num_units}")
+        
+        trailers = []
+        remaining_items = items.copy()
+        
+        for t_idx in range(num_units):
+            if not remaining_items:
+                break
+            trailer = Trailer(
+                name=f"{safe_text(trailer_type)}_{t_idx+1}",
+                type_name=trailer_type,
+                length_m=13.6,
+                width_m=2.8 if "Low-Loader" in trailer_type else 2.4,
+                deck_height_m=0.8 if "Low-Loader" in trailer_type else 1.2,
+                max_payload_kg=payload_per_unit * 1000,
+                max_rear_axle_kg=27000 if "Tri-Axle" in trailer_type else 18000,
+                max_kingpin_kg=15000 if "Tri-Axle" in trailer_type else 12000,
+                wheelbase_m=10.5,
+                trailer_tare_kg=7000 if "Tri-Axle" in trailer_type else 6000
+            )
+            packed, remaining, packed_mass = pack_standard_trailer(trailer, remaining_items)
+            if packed:
+                trailers.append(trailer)
+                remaining_items = remaining
+                print(f"\n   {trailer.name}: {len(packed)} items, {packed_mass/1000:.1f}t")
+        
+        return trailers
 
 
 def run_master_configurator(input_file=None):
@@ -389,146 +515,125 @@ def run_master_configurator(input_file=None):
     mode = input("\n   Select (1-2) [default: 1]: ").strip()
     
     if mode == "2":
-        # Manual selection mode (original behavior)
-        return manual_selection_mode(items, total_mass_tons, input_file)
-    
-    # ===== AUTO-OPTIMIZE MODE =====
-    print("\n" + "-"*50)
-    print("STEP 3: Testing All Trailer Configurations")
-    print("-"*50)
-    
-    print("\n   Analyzing which trailer type uses the FEWEST units...")
-    
-    # Run optimization
-    results = optimize_trailer_selection(items, verbose=True)
-    
-    # Display results
-    print("\n" + "="*70)
-    print("OPTIMIZATION RESULTS - SORTED BY EFFICIENCY")
-    print("="*70)
-    print(f"\n{'Rank':<4} {'Trailer Type':<25} {'Units':<6} {'Placed':<10} {'Utilization':<12} {'Complete':<8}")
-    print("-"*70)
-    
-    for i, result in enumerate(results[:8], 1):
-        complete_mark = "✅ YES" if result["is_complete"] else "⚠️ PARTIAL"
-        print(f"{i:<4} {result['name']:<25} {result['units']:<6} {result['placed_mass_tons']:.1f}t     {result['utilization']:.1f}%       {complete_mark:<8}")
-    
-    # Get the best option
-    best = results[0]
-    
-    print("\n" + "="*70)
-    print("🏆 RECOMMENDED SOLUTION")
-    print("="*70)
-    print(f"\n   Trailer Type: {best['name']}")
-    print(f"   Configuration: {best['type']}")
-    print(f"   Number of units needed: {best['units']}")
-    print(f"   Payload per unit: {best['payload_per_unit_tons']:.0f} tonnes")
-    print(f"   Total mass placed: {best['placed_mass_tons']:.1f} / {total_mass_tons:.1f} tonnes")
-    print(f"   Space utilization: {best['utilization']:.1f}%")
-    
-    if best["is_complete"]:
-        print(f"\n   ✅ All {len(items)} items will fit in {best['units']} x {best['name']}")
+        trailers = manual_selection_mode(items, total_mass_tons)
     else:
-        remaining_mass = total_mass_tons - best["placed_mass_tons"]
-        print(f"\n   ⚠️ {len(items) - best['placed_items']} items ({remaining_mass:.1f}t) could not be placed")
-        print(f"   Consider using {best['units'] + 1} units or a different configuration")
-    
-    # Ask user to confirm
-    print("\n" + "-"*50)
-    use_recommended = input("\n   Use this recommended configuration? (Y/n): ").strip().lower()
-    
-    if use_recommended == 'n':
-        # Show all options and let user pick
-        print("\n   Available configurations:")
+        # ===== AUTO-OPTIMIZE MODE =====
+        print("\n" + "-"*50)
+        print("STEP 3: Testing All Trailer Configurations")
+        print("-"*50)
+        
+        print("\n   Analyzing which trailer type uses the FEWEST units...")
+        
+        results = optimize_trailer_selection(items, verbose=True)
+        
+        print("\n" + "="*70)
+        print("OPTIMIZATION RESULTS - SORTED BY EFFICIENCY")
+        print("="*70)
+        print(f"\n{'Rank':<4} {'Trailer Type':<25} {'Units':<6} {'Placed':<10} {'Utilization':<12} {'Complete':<8}")
+        print("-"*70)
+        
         for i, result in enumerate(results[:8], 1):
-            print(f"   {i}. {result['name']} - {result['units']} unit(s), {result['utilization']:.1f}% utilization")
+            complete_mark = "YES" if result["is_complete"] else "PARTIAL"
+            print(f"{i:<4} {result['name']:<25} {result['units']:<6} {result['placed_mass_tons']:.1f}t     {result['utilization']:.1f}%       {complete_mark:<8}")
         
-        try:
-            choice = int(input("\n   Select configuration (1-8): ").strip())
-            if 1 <= choice <= len(results):
-                best = results[choice - 1]
-        except:
-            pass
-    
-    # ===== PROCEED WITH SELECTED CONFIGURATION =====
-    print("\n" + "-"*50)
-    print("STEP 4: Generating Load Plan")
-    print("-"*50)
-    
-    trailer_type = best["name"]
-    is_superlink = best["type"] == "Superlink"
-    
-    print(f"\n   Using: {trailer_type}")
-    print(f"   Units needed: {best['units']}")
-    
-    if is_superlink:
-        # Pack items into Superlinks
-        all_superlinks = []
-        remaining_items = items.copy()
-        sl_idx = 0
+        best = results[0]
         
-        for sl_idx in range(best["units"]):
-            if not remaining_items:
-                break
-                
-            superlink = SuperlinkTrailer(name=f"Superlink_{sl_idx+1}", config_type=trailer_type)
-            packed, remaining, front_mass, rear_mass = pack_superlink(superlink, remaining_items)
-            remaining_items = remaining
-            
-            if packed:
-                all_superlinks.append(superlink)
-                print(f"\n   {superlink.name}:")
-                print(f"      Front: {len(superlink.front['items'])} items, {front_mass/1000:.1f}t")
-                print(f"      Rear: {len(superlink.rear['items'])} items, {rear_mass/1000:.1f}t")
+        print("\n" + "="*70)
+        print("RECOMMENDED SOLUTION")
+        print("="*70)
+        print(f"\n   Trailer Type: {best['name']}")
+        print(f"   Configuration: {best['type']}")
+        print(f"   Number of units needed: {best['units']}")
+        print(f"   Payload per unit: {best['payload_per_unit_tons']:.0f} tonnes")
+        print(f"   Total mass placed: {best['placed_mass_tons']:.1f} / {total_mass_tons:.1f} tonnes")
+        print(f"   Space utilization: {best['utilization']:.1f}%")
         
-        trailers = all_superlinks
-        
-    else:
-        # Pack items into standard trailers
-        from optimizer_engine import Trailer
-        
-        # Get specs for selected trailer
-        if "Tri-Axle" in trailer_type:
-            rear_limit = 27000
-            kingpin = 15000
-            tare = 7000
-            width = 2.8 if "Low-Loader" in trailer_type else 2.4
-            deck = 0.8 if "Low-Loader" in trailer_type else 1.2
+        if best["is_complete"]:
+            print(f"\n   All {len(items)} items will fit in {best['units']} x {best['name']}")
         else:
-            rear_limit = 18000
-            kingpin = 12000
-            tare = 6000
-            width = 2.8 if "Low-Loader" in trailer_type else 2.4
-            deck = 0.8 if "Low-Loader" in trailer_type else 1.2
+            remaining_mass = total_mass_tons - best["placed_mass_tons"]
+            print(f"\n   WARNING: {len(items) - best['placed_items']} items ({remaining_mass:.1f}t) could not be placed")
         
-        payload = best["payload_per_unit_tons"] * 1000
+        use_recommended = input("\n   Use this recommended configuration? (Y/n): ").strip().lower()
         
-        trailers = []
-        remaining_items = items.copy()
-        
-        for t_idx in range(best["units"]):
-            if not remaining_items:
-                break
-                
-            trailer = Trailer(
-                name=f"{safe_text(trailer_type)}_{t_idx+1}",
-                type_name=trailer_type,
-                length_m=13.6,
-                width_m=width,
-                deck_height_m=deck,
-                max_payload_kg=payload,
-                max_rear_axle_kg=rear_limit,
-                max_kingpin_kg=kingpin,
-                wheelbase_m=10.5,
-                trailer_tare_kg=tare
-            )
+        if use_recommended == 'n':
+            print("\n   Available configurations:")
+            for i, result in enumerate(results[:8], 1):
+                print(f"   {i}. {result['name']} - {result['units']} unit(s), {result['utilization']:.1f}% utilization")
             
-            packed, remaining, packed_mass = pack_standard_trailer(trailer, remaining_items)
-            remaining_items = remaining
+            try:
+                choice = int(input("\n   Select configuration (1-8): ").strip())
+                if 1 <= choice <= len(results):
+                    best = results[choice - 1]
+            except:
+                pass
+        
+        # Generate load plan with selected configuration
+        print("\n" + "-"*50)
+        print("STEP 4: Generating Load Plan")
+        print("-"*50)
+        
+        trailer_type = best["name"]
+        is_superlink = best["type"] == "Superlink"
+        
+        print(f"\n   Using: {trailer_type}")
+        print(f"   Units needed: {best['units']}")
+        
+        if is_superlink:
+            all_superlinks = []
+            remaining_items = items.copy()
             
-            if packed:
-                trailers.append(trailer)
-                print(f"\n   {trailer.name}: {len(packed)} items, {packed_mass/1000:.1f}t")
+            for sl_idx in range(best["units"]):
+                if not remaining_items:
+                    break
+                superlink = SuperlinkTrailer(name=f"Superlink_{sl_idx+1}", config_type=trailer_type)
+                packed, remaining, front_mass, rear_mass = pack_superlink(superlink, remaining_items)
+                if packed:
+                    all_superlinks.append(superlink)
+                    remaining_items = remaining
+                    print(f"\n   {superlink.name}:")
+                    print(f"      Front: {len(superlink.front['items'])} items, {front_mass/1000:.1f}t")
+                    print(f"      Rear: {len(superlink.rear['items'])} items, {rear_mass/1000:.1f}t")
+            
+            trailers = all_superlinks
+        else:
+            if "Tri-Axle" in trailer_type:
+                rear_limit = 27000
+                kingpin = 15000
+                tare = 7000
+                width = 2.8 if "Low-Loader" in trailer_type else 2.4
+                deck = 0.8 if "Low-Loader" in trailer_type else 1.2
+            else:
+                rear_limit = 18000
+                kingpin = 12000
+                tare = 6000
+                width = 2.8 if "Low-Loader" in trailer_type else 2.4
+                deck = 0.8 if "Low-Loader" in trailer_type else 1.2
+            
+            payload = best["payload_per_unit_tons"] * 1000
+            trailers = []
+            remaining_items = items.copy()
+            
+            for t_idx in range(best["units"]):
+                if not remaining_items:
+                    break
+                trailer = Trailer(
+                    name=f"{safe_text(trailer_type)}_{t_idx+1}",
+                    type_name=trailer_type,
+                    length_m=13.6,
+                    width_m=width,
+                    deck_height_m=deck,
+                    max_payload_kg=payload,
+                    max_rear_axle_kg=rear_limit,
+                    max_kingpin_kg=kingpin,
+                    wheelbase_m=10.5,
+                    trailer_tare_kg=tare
+                )
+                packed, remaining, packed_mass = pack_standard_trailer(trailer, remaining_items)
+                if packed:
+                    trailers.append(trailer)
+                    remaining_items = remaining
+                    print(f"\n   {trailer.name}: {len(packed)} items, {packed_mass/1000:.1f}t")
     
     # ===== STEP 5: Legal Compliance =====
     print("\n" + "-"*50)
@@ -619,8 +724,7 @@ def run_master_configurator(input_file=None):
     print("\n" + "="*70)
     print("OPTIMIZATION COMPLETE")
     print("="*70)
-    print(f"\n   Selected: {best['name']}")
-    print(f"   Units used: {len(export_trailers)}")
+    print(f"\n   Total units used: {len(export_trailers)}")
     print(f"   Total items placed: {sum(len(t) for t in export_items_by_trailer)} / {len(items)}")
     if export_trailers:
         total_placed_mass = sum(t.total_mass_kg if hasattr(t, 'total_mass_kg') else sum(i.mass_kg for i in t.items) for t in export_trailers) / 1000
@@ -631,112 +735,6 @@ def run_master_configurator(input_file=None):
     return True
 
 
-def manual_selection_mode(items, total_mass_tons, input_file):
-    """Original manual selection mode"""
-    print("\n" + "-"*50)
-    print("MANUAL TRAILER SELECTION")
-    print("-"*50)
-    
-    print("\n   Available trailer types:")
-    print("   1. Flatbed Standard (13.6m, 28t payload, 2 axles)")
-    print("   2. Low-Loader (13.6m, 35t payload, 2 axles)")
-    print("   3. TRI-AXLE Flatbed (13.6m, 30t payload, 3 axles)")
-    print("   4. TRI-AXLE Low-Loader (13.6m, 35t payload, 3 axles)")
-    print("   5. Abnormal (18.0m, 50t payload, requires permit)")
-    print("   6. SUPERLINK (6m + 12m, 34t payload)")
-    print("   7. SUPERLINK Tri-Axle (6m + 12m tri-axle rear, 34t)")
-    print("   8. INTERLINK (6m + 6m, 34t payload)")
-    
-    choice = input("\n   Select (1-8) [default: 1]: ").strip()
-    
-    if choice == "2":
-        trailer_type = "Low-Loader"
-        is_superlink = False
-    elif choice == "3":
-        trailer_type = "Tri-Axle Flatbed"
-        is_superlink = False
-    elif choice == "4":
-        trailer_type = "Tri-Axle Low-Loader"
-        is_superlink = False
-    elif choice == "5":
-        trailer_type = "Abnormal (Extendable)"
-        is_superlink = False
-    elif choice == "6":
-        trailer_type = "Superlink (6m + 12m)"
-        is_superlink = True
-    elif choice == "7":
-        trailer_type = "Tri-Axle Superlink"
-        is_superlink = True
-    elif choice == "8":
-        trailer_type = "Interlink (6m + 6m)"
-        is_superlink = True
-    else:
-        trailer_type = "Flatbed Standard"
-        is_superlink = False
-    
-    print(f"\n   Selected: {trailer_type}")
-    
-    if is_superlink:
-        payload_per_unit = 34
-        num_units = max(1, int(total_mass_tons / payload_per_unit) + 1)
-        num_units = min(num_units, 10)
-        print(f"\n   Estimated units needed: {num_units}")
-        
-        all_superlinks = []
-        remaining_items = items.copy()
-        
-        for sl_idx in range(num_units):
-            if not remaining_items:
-                break
-            superlink = SuperlinkTrailer(name=f"Superlink_{sl_idx+1}", config_type=trailer_type)
-            packed, remaining, front_mass, rear_mass = pack_superlink(superlink, remaining_items)
-            if packed:
-                all_superlinks.append(superlink)
-                remaining_items = remaining
-                print(f"\n   {superlink.name}: Front: {len(superlink.front['items'])} items ({front_mass/1000:.1f}t), Rear: {len(superlink.rear['items'])} items ({rear_mass/1000:.1f}t)")
-        
-        trailers = all_superlinks
-        
-    else:
-        specs = {"Flatbed Standard": 28, "Low-Loader": 35, "Tri-Axle Flatbed": 30, "Tri-Axle Low-Loader": 35, "Abnormal (Extendable)": 50}
-        payload_per_unit = specs.get(trailer_type, 28)
-        num_units = max(1, int(total_mass_tons / payload_per_unit) + 1)
-        num_units = min(num_units, 10)
-        print(f"\n   Estimated units needed: {num_units}")
-        
-        from optimizer_engine import Trailer
-        
-        trailers = []
-        remaining_items = items.copy()
-        
-        for t_idx in range(num_units):
-            if not remaining_items:
-                break
-            trailer = Trailer(
-                name=f"{safe_text(trailer_type)}_{t_idx+1}",
-                type_name=trailer_type,
-                length_m=13.6,
-                width_m=2.8 if "Low-Loader" in trailer_type else 2.4,
-                deck_height_m=0.8 if "Low-Loader" in trailer_type else 1.2,
-                max_payload_kg=payload_per_unit * 1000,
-                max_rear_axle_kg=27000 if "Tri-Axle" in trailer_type else 18000,
-                max_kingpin_kg=15000 if "Tri-Axle" in trailer_type else 12000,
-                wheelbase_m=10.5,
-                trailer_tare_kg=7000 if "Tri-Axle" in trailer_type else 6000
-            )
-            packed, remaining, packed_mass = pack_standard_trailer(trailer, remaining_items)
-            if packed:
-                trailers.append(trailer)
-                remaining_items = remaining
-                print(f"\n   {trailer.name}: {len(packed)} items, {packed_mass/1000:.1f}t")
-    
-    # Continue with visualization and export (same as auto mode)
-    # ... (rest of visualization and export code from auto mode)
-    
-    # For brevity, call the visualization/export functions
-    # I'll add this in the final response
-
-
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='FML Load Configurator - Smart Optimizer')
@@ -745,112 +743,3 @@ if __name__ == "__main__":
     
     success = run_master_configurator(input_file=args.file)
     sys.exit(0 if success else 1)
-
-    def pack_superlink(superlink, items):
-    """
-    Pack items into a Superlink using best-fit algorithm.
-    Prevents overlapping placements.
-    Returns: (packed_items, remaining_items, front_mass, rear_mass)
-    """
-    # Sort items by length (largest first) for efficient packing
-    items_to_pack = sorted(items, key=lambda x: -x.length_m)
-    
-    # Track space on each trailer as a list of occupied segments
-    # Start with empty space from 0.2m to trailer end
-    front_occupied = []  # List of (start, end) occupied segments
-    rear_occupied = []   # List of (start, end) occupied segments
-    
-    front_items = []
-    rear_items = []
-    front_mass = 0
-    rear_mass = 0
-    
-    packed_items = []
-    remaining = []
-    
-    # Helper function to find available space
-    def find_space(occupied, trailer_length, item_length):
-        """Find first available gap that fits item_length"""
-        if not occupied:
-            # No items yet, start at 0.2m
-            if 0.2 + item_length <= trailer_length:
-                return 0.2
-            return None
-        
-        # Check space before first item
-        first_start = occupied[0][0]
-        if 0.2 + item_length <= first_start:
-            return 0.2
-        
-        # Check spaces between items
-        for i in range(len(occupied) - 1):
-            gap_start = occupied[i][1] + 0.2  # Add 20cm gap
-            gap_end = occupied[i + 1][0]
-            if gap_start + item_length <= gap_end:
-                return gap_start
-        
-        # Check space after last item
-        last_end = occupied[-1][1]
-        if last_end + 0.2 + item_length <= trailer_length:
-            return last_end + 0.2
-        
-        return None
-    
-    # Helper function to add occupied space
-    def add_occupied(occupied, start, end):
-        """Add occupied segment and merge if adjacent"""
-        occupied.append((start, end))
-        occupied.sort()
-        
-        # Merge overlapping segments
-        merged = []
-        for seg in occupied:
-            if not merged:
-                merged.append(list(seg))
-            elif seg[0] <= merged[-1][1] + 0.05:  # Within 5cm, merge
-                merged[-1][1] = max(merged[-1][1], seg[1])
-            else:
-                merged.append(list(seg))
-        
-        return [tuple(m) for m in merged]
-    
-    for item in items_to_pack:
-        placed = False
-        
-        # Try front trailer first (better for weight distribution)
-        front_space = find_space(front_occupied, superlink.front["length_m"], item.length_m)
-        if front_space is not None:
-            if front_mass + item.mass_kg <= superlink.front["max_payload_kg"]:
-                item.x_pos = front_space
-                item.y_pos = 0.15
-                item.trailer_section = "front"
-                front_items.append(item)
-                front_mass += item.mass_kg
-                front_occupied = add_occupied(front_occupied, front_space, front_space + item.length_m)
-                packed_items.append(item)
-                placed = True
-        
-        if not placed:
-            # Try rear trailer
-            rear_space = find_space(rear_occupied, superlink.rear["length_m"], item.length_m)
-            if rear_space is not None:
-                if rear_mass + item.mass_kg <= superlink.rear["max_payload_kg"]:
-                    item.x_pos = rear_space
-                    item.y_pos = 0.15
-                    item.trailer_section = "rear"
-                    rear_items.append(item)
-                    rear_mass += item.mass_kg
-                    rear_occupied = add_occupied(rear_occupied, rear_space, rear_space + item.length_m)
-                    packed_items.append(item)
-                    placed = True
-        
-        if not placed:
-            remaining.append(item)
-    
-    # Add items to superlink
-    for item in front_items:
-        superlink.add_item_to_front(item, item.x_pos)
-    for item in rear_items:
-        superlink.add_item_to_rear(item, item.x_pos)
-    
-    return packed_items, remaining, front_mass, rear_mass
