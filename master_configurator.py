@@ -745,3 +745,112 @@ if __name__ == "__main__":
     
     success = run_master_configurator(input_file=args.file)
     sys.exit(0 if success else 1)
+
+    def pack_superlink(superlink, items):
+    """
+    Pack items into a Superlink using best-fit algorithm.
+    Prevents overlapping placements.
+    Returns: (packed_items, remaining_items, front_mass, rear_mass)
+    """
+    # Sort items by length (largest first) for efficient packing
+    items_to_pack = sorted(items, key=lambda x: -x.length_m)
+    
+    # Track space on each trailer as a list of occupied segments
+    # Start with empty space from 0.2m to trailer end
+    front_occupied = []  # List of (start, end) occupied segments
+    rear_occupied = []   # List of (start, end) occupied segments
+    
+    front_items = []
+    rear_items = []
+    front_mass = 0
+    rear_mass = 0
+    
+    packed_items = []
+    remaining = []
+    
+    # Helper function to find available space
+    def find_space(occupied, trailer_length, item_length):
+        """Find first available gap that fits item_length"""
+        if not occupied:
+            # No items yet, start at 0.2m
+            if 0.2 + item_length <= trailer_length:
+                return 0.2
+            return None
+        
+        # Check space before first item
+        first_start = occupied[0][0]
+        if 0.2 + item_length <= first_start:
+            return 0.2
+        
+        # Check spaces between items
+        for i in range(len(occupied) - 1):
+            gap_start = occupied[i][1] + 0.2  # Add 20cm gap
+            gap_end = occupied[i + 1][0]
+            if gap_start + item_length <= gap_end:
+                return gap_start
+        
+        # Check space after last item
+        last_end = occupied[-1][1]
+        if last_end + 0.2 + item_length <= trailer_length:
+            return last_end + 0.2
+        
+        return None
+    
+    # Helper function to add occupied space
+    def add_occupied(occupied, start, end):
+        """Add occupied segment and merge if adjacent"""
+        occupied.append((start, end))
+        occupied.sort()
+        
+        # Merge overlapping segments
+        merged = []
+        for seg in occupied:
+            if not merged:
+                merged.append(list(seg))
+            elif seg[0] <= merged[-1][1] + 0.05:  # Within 5cm, merge
+                merged[-1][1] = max(merged[-1][1], seg[1])
+            else:
+                merged.append(list(seg))
+        
+        return [tuple(m) for m in merged]
+    
+    for item in items_to_pack:
+        placed = False
+        
+        # Try front trailer first (better for weight distribution)
+        front_space = find_space(front_occupied, superlink.front["length_m"], item.length_m)
+        if front_space is not None:
+            if front_mass + item.mass_kg <= superlink.front["max_payload_kg"]:
+                item.x_pos = front_space
+                item.y_pos = 0.15
+                item.trailer_section = "front"
+                front_items.append(item)
+                front_mass += item.mass_kg
+                front_occupied = add_occupied(front_occupied, front_space, front_space + item.length_m)
+                packed_items.append(item)
+                placed = True
+        
+        if not placed:
+            # Try rear trailer
+            rear_space = find_space(rear_occupied, superlink.rear["length_m"], item.length_m)
+            if rear_space is not None:
+                if rear_mass + item.mass_kg <= superlink.rear["max_payload_kg"]:
+                    item.x_pos = rear_space
+                    item.y_pos = 0.15
+                    item.trailer_section = "rear"
+                    rear_items.append(item)
+                    rear_mass += item.mass_kg
+                    rear_occupied = add_occupied(rear_occupied, rear_space, rear_space + item.length_m)
+                    packed_items.append(item)
+                    placed = True
+        
+        if not placed:
+            remaining.append(item)
+    
+    # Add items to superlink
+    for item in front_items:
+        superlink.add_item_to_front(item, item.x_pos)
+    for item in rear_items:
+        superlink.add_item_to_rear(item, item.x_pos)
+    
+    return packed_items, remaining, front_mass, rear_mass
