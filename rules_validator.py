@@ -216,7 +216,7 @@ class SARoadTrafficValidator:
         total_height = max((item.height_m for item in items), default=0)
         total_width = max((item.width_m for item in items), default=0)
         max_item_length = max((item.length_m for item in items), default=0)
-        total_mass = sum((item.mass_kg for item in items), default=0) / 1000  # tonnes
+        total_mass = sum([item.mass_kg for item in items]) / 1000 if items else 0  # tonnes
         
         is_ingauge = True
         reasons = []
