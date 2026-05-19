@@ -16,6 +16,8 @@ class Item:
     y_pos: float = 0
     rotated: bool = False
 
+# In optimizer_engine.py, update the Trailer class __init__:
+
 @dataclass
 class Trailer:
     name: str
@@ -27,6 +29,7 @@ class Trailer:
     max_rear_axle_kg: float
     max_kingpin_kg: float
     wheelbase_m: float
+    trailer_tare_kg: float = 6000  # Add this line
     items: List[Item] = None
     
     def __post_init__(self):
