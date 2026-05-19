@@ -1,6 +1,6 @@
 """
 Trailer Library with South African Specifications
-Includes Standard Trailers and Superlink (Link) Configurations
+Includes Standard Trailers, Tri-Axle, and Superlink (Link) Configurations
 """
 
 from dataclasses import dataclass, field
@@ -10,20 +10,24 @@ from typing import List, Dict, Optional, Tuple
 # ==================== TRAILER TYPE DEFINITIONS ====================
 
 TRAILER_TYPES = {
-    # ===== STANDARD SINGLE TRAILERS =====
+    # ===== STANDARD SINGLE TRAILERS (Tandem Axle) =====
     "Flatbed Standard": {
         "type": "single",
         "length_m": 13.6,
         "width_m": 2.4,
         "deck_height_m": 1.2,
         "max_payload_kg": 28000,
-        "max_rear_axle_kg": 18000,
+        "max_rear_axle_kg": 18000,  # Tandem limit
         "max_kingpin_kg": 12000,
         "wheelbase_m": 10.5,
-        "axle_count": 3,
+        "axle_count": 2,
+        "axle_configuration": [
+            {"type": "steering", "axle_count": 1},
+            {"type": "tandem", "axle_count": 2}
+        ],
         "tare_kg": 6000,
         "permit_required": False,
-        "description": "Standard flatbed trailer, no permit required for standard loads",
+        "description": "Standard flatbed trailer, tandem axles. Max rear load 18t.",
         "container_capacity": "1 x 40ft or 2 x 20ft"
     },
     
@@ -33,14 +37,63 @@ TRAILER_TYPES = {
         "width_m": 2.8,
         "deck_height_m": 0.8,
         "max_payload_kg": 35000,
-        "max_rear_axle_kg": 22000,
+        "max_rear_axle_kg": 18000,
         "max_kingpin_kg": 15000,
         "wheelbase_m": 9.5,
-        "axle_count": 4,
+        "axle_count": 2,
+        "axle_configuration": [
+            {"type": "steering", "axle_count": 1},
+            {"type": "tandem", "axle_count": 2}
+        ],
         "tare_kg": 8000,
         "permit_required": False,
-        "description": "Low-bed trailer for tall/heavy gensets",
+        "description": "Low-bed trailer for tall/heavy gensets. Tandem axles.",
         "container_capacity": "1 x 40ft or 2 x 20ft"
+    },
+    
+    # ===== TRI-AXLE CONFIGURATIONS =====
+    "Tri-Axle Flatbed": {
+        "type": "single",
+        "is_triaxle": True,
+        "length_m": 13.6,
+        "width_m": 2.4,
+        "deck_height_m": 1.2,
+        "max_payload_kg": 30000,
+        "max_rear_axle_kg": 27000,  # Tri-axle group limit (Reg 240)
+        "max_kingpin_kg": 12000,
+        "wheelbase_m": 10.5,
+        "axle_count": 3,
+        "axle_configuration": [
+            {"type": "steering", "axle_count": 1},
+            {"type": "triaxle", "axle_count": 3}
+        ],
+        "tare_kg": 7000,
+        "permit_required": False,
+        "description": "Tri-axle flatbed trailer. 3 rear axles, max payload 30t. Legal axle group limit 27t.",
+        "container_capacity": "1 x 40ft or 2 x 20ft",
+        "best_for": "Heavy machinery, gensets, steel, dense cargo"
+    },
+    
+    "Tri-Axle Low-Loader": {
+        "type": "single",
+        "is_triaxle": True,
+        "length_m": 13.6,
+        "width_m": 2.8,
+        "deck_height_m": 0.8,
+        "max_payload_kg": 35000,
+        "max_rear_axle_kg": 27000,
+        "max_kingpin_kg": 15000,
+        "wheelbase_m": 9.5,
+        "axle_count": 3,
+        "axle_configuration": [
+            {"type": "steering", "axle_count": 1},
+            {"type": "triaxle", "axle_count": 3}
+        ],
+        "tare_kg": 8500,
+        "permit_required": False,
+        "description": "Tri-axle low-loader for tall/heavy gensets. Max payload 35t.",
+        "container_capacity": "1 x 40ft or 2 x 20ft",
+        "best_for": "Tall gensets, heavy machinery with height"
     },
     
     "Abnormal (Extendable)": {
@@ -53,6 +106,11 @@ TRAILER_TYPES = {
         "max_kingpin_kg": 18000,
         "wheelbase_m": 14.0,
         "axle_count": 6,
+        "axle_configuration": [
+            {"type": "steering", "axle_count": 1},
+            {"type": "triaxle", "axle_count": 3},
+            {"type": "tandem", "axle_count": 2}
+        ],
         "tare_kg": 10000,
         "permit_required": True,
         "description": "Requires abnormal load permit (Section 81)",
@@ -69,6 +127,12 @@ TRAILER_TYPES = {
         "max_kingpin_kg": 25000,
         "wheelbase_m": 19.0,
         "axle_count": 8,
+        "axle_configuration": [
+            {"type": "steering", "axle_count": 1},
+            {"type": "triaxle", "axle_count": 3},
+            {"type": "triaxle", "axle_count": 3},
+            {"type": "single", "axle_count": 1}
+        ],
         "tare_kg": 15000,
         "permit_required": True,
         "description": "Escort vehicles required, route approval needed",
@@ -87,7 +151,7 @@ TRAILER_TYPES = {
             "max_payload_kg": 14000,
             "tare_kg": 3500,
             "axle_count": 2,
-            "container_fit": "1 x 20ft"
+            "axle_config": [{"type": "single", "axle_count": 2}]
         },
         "rear_trailer": {
             "name": "Follower (Rear)",
@@ -96,8 +160,8 @@ TRAILER_TYPES = {
             "deck_height_m": 1.2,
             "max_payload_kg": 20000,
             "tare_kg": 4500,
-            "axle_count": 3,
-            "container_fit": "1 x 40ft or 2 x 20ft"
+            "axle_count": 2,
+            "axle_config": [{"type": "tandem", "axle_count": 2}]
         },
         "total_length_m": 18.0,
         "articulation_gap_m": 0.5,
@@ -106,8 +170,43 @@ TRAILER_TYPES = {
         "pallet_capacity_single": 60,
         "pallet_capacity_euro": 84,
         "permit_required": False,
-        "description": "6m front + 12m rear trailer. Ideal for 2 x 20ft + 1 x 40ft containers. Max payload 34t.",
+        "description": "6m front + 12m rear trailer (tandem axles). Max payload 34t.",
         "best_for": "Container transport, palletized goods, mixed cargo"
+    },
+    
+    "Tri-Axle Superlink": {
+        "type": "superlink",
+        "is_link": True,
+        "is_triaxle": True,
+        "front_trailer": {
+            "name": "Leader (Front)",
+            "length_m": 6.0,
+            "width_m": 2.4,
+            "deck_height_m": 1.2,
+            "max_payload_kg": 14000,
+            "tare_kg": 3500,
+            "axle_count": 2,
+            "axle_config": [{"type": "single", "axle_count": 2}]
+        },
+        "rear_trailer": {
+            "name": "Follower (Rear) - Tri-Axle",
+            "length_m": 12.0,
+            "width_m": 2.4,
+            "deck_height_m": 1.2,
+            "max_payload_kg": 20000,
+            "tare_kg": 5000,
+            "axle_count": 3,
+            "axle_config": [{"type": "triaxle", "axle_count": 3}]
+        },
+        "total_length_m": 18.0,
+        "articulation_gap_m": 0.5,
+        "max_payload_kg": 34000,
+        "max_gcm_kg": 56000,
+        "pallet_capacity_single": 60,
+        "pallet_capacity_euro": 84,
+        "permit_required": False,
+        "description": "Superlink with TRI-AXLE rear trailer. Rear axle group: 27t legal limit.",
+        "best_for": "Maximum legal payload, heavy container transport"
     },
     
     "Interlink (6m + 6m)": {
@@ -120,7 +219,8 @@ TRAILER_TYPES = {
             "deck_height_m": 1.2,
             "max_payload_kg": 17000,
             "tare_kg": 3500,
-            "axle_count": 2
+            "axle_count": 2,
+            "axle_config": [{"type": "single", "axle_count": 2}]
         },
         "rear_trailer": {
             "name": "Follower (Rear)",
@@ -129,7 +229,8 @@ TRAILER_TYPES = {
             "deck_height_m": 1.2,
             "max_payload_kg": 17000,
             "tare_kg": 3500,
-            "axle_count": 2
+            "axle_count": 2,
+            "axle_config": [{"type": "tandem", "axle_count": 2}]
         },
         "total_length_m": 12.0,
         "articulation_gap_m": 0.5,
@@ -138,7 +239,7 @@ TRAILER_TYPES = {
         "pallet_capacity_single": 40,
         "pallet_capacity_euro": 56,
         "permit_required": False,
-        "description": "6m + 6m configuration for high-density loads like mining or grain",
+        "description": "6m + 6m configuration for high-density loads",
         "best_for": "Bulk commodities, side-tippers, heavy dense cargo"
     }
 }
@@ -147,29 +248,14 @@ TRAILER_TYPES = {
 # ==================== SUPERLINK TRAILER CLASS ====================
 
 class SuperlinkTrailer:
-    """
-    Superlink (Link) Trailer - Two trailers articulated together
-    Front trailer: 6m (Leader)
-    Rear trailer: 12m (Follower)
-    
-    This class handles the special loading requirements for link trailers:
-    - Separate loading areas (front and rear)
-    - Articulation gap between trailers
-    - Combined weight limits
-    """
+    """Superlink (Link) Trailer - Two trailers articulated together"""
     
     def __init__(self, name="Superlink", config_type="Superlink (6m + 12m)"):
-        """
-        Initialize a Superlink trailer combination.
-        
-        Args:
-            name: Identifier for this Superlink (e.g., "Superlink_1")
-            config_type: Must be one of TRAILER_TYPES keys with is_link=True
-        """
         self.name = name
         self.config = TRAILER_TYPES[config_type]
         self.type_name = config_type
         self.is_link = True
+        self.is_triaxle = self.config.get("is_triaxle", False)
         
         # Front trailer (Leader)
         self.front = self.config["front_trailer"].copy()
@@ -186,116 +272,80 @@ class SuperlinkTrailer:
         self.max_payload_kg = self.config["max_payload_kg"]
         self.articulation_gap_m = self.config.get("articulation_gap_m", 0.5)
         self.total_mass_kg = 0
-        self.width_m = self.front["width_m"]  # Both trailers same width
+        self.width_m = self.front["width_m"]
         self.length_m = self.total_length_m
-        
-        # For compatibility with visualizer
-        self.items = []  # Will be populated by get_all_items()
+        self.items = []
     
-    # ==================== PROPERTIES FOR COMPATIBILITY ====================
-    
+    # Properties for compatibility
     @property
     def wheelbase_m(self):
-        """Return effective wheelbase for Superlink"""
-        return 10.5  # Standard wheelbase for compliance calculations
+        return 10.5
     
     @property
     def max_kingpin_kg(self):
-        """Return kingpin limit for Superlink"""
-        return 12000
+        return self.config.get("max_kingpin_kg", 12000)
     
     @property
     def max_rear_axle_kg(self):
-        """Return rear axle limit for Superlink"""
+        if self.is_triaxle:
+            return 27000
         return 18000
     
     @property
     def deck_height_m(self):
-        """Return deck height"""
-        return 1.2
+        return self.front["deck_height_m"]
     
     @property
     def trailer_tare_kg(self):
-        """Return tare weight of Superlink combination"""
         return self.front.get("tare_kg", 3500) + self.rear.get("tare_kg", 4500)
     
-    # ==================== METHODS ====================
+    @property
+    def axle_count(self):
+        return self.front.get("axle_count", 2) + self.rear.get("axle_count", 2)
     
+    @property
+    def axle_configuration(self):
+        config = []
+        config.extend(self.front.get("axle_config", [{"type": "single", "axle_count": 2}]))
+        config.extend(self.rear.get("axle_config", [{"type": "tandem", "axle_count": 2}]))
+        return config
+    
+    # Methods
     def can_add_item_to_front(self, item, x_pos, gap_m=0.15):
-        """
-        Check if item fits on front trailer (6m)
-        
-        Args:
-            item: Item object with length_m, width_m, mass_kg attributes
-            x_pos: Desired X position in meters from front of front trailer
-            gap_m: Required gap between items in meters
-            
-        Returns:
-            (can_fit: bool, reason: str)
-        """
-        # Check length
         if x_pos + item.length_m > self.front["length_m"]:
             return False, f"Exceeds front trailer length ({self.front['length_m']}m)"
-        
-        # Check width
         if item.width_m > self.front["width_m"]:
-            return False, f"Width {item.width_m}m exceeds trailer width {self.front['width_m']}m"
-        
-        # Check weight capacity
+            return False, f"Width {item.width_m}m exceeds trailer width"
         if self.front["total_mass_kg"] + item.mass_kg > self.front["max_payload_kg"]:
-            return False, f"Would exceed front trailer payload ({self.front['max_payload_kg']/1000:.0f}t)"
-        
-        # Collision check with existing items
+            return False, f"Would exceed front trailer payload"
         for existing in self.front["items"]:
             if (x_pos < existing.x_pos + existing.length_m + gap_m and
                 x_pos + item.length_m + gap_m > existing.x_pos):
-                return False, f"Collision with {existing.consignment} on front trailer"
-        
+                return False, f"Collision with {existing.consignment}"
         return True, "OK"
     
     def can_add_item_to_rear(self, item, x_pos, gap_m=0.15):
-        """
-        Check if item fits on rear trailer (12m)
-        
-        Args:
-            item: Item object with length_m, width_m, mass_kg attributes
-            x_pos: Desired X position in meters from front of rear trailer
-            gap_m: Required gap between items in meters
-            
-        Returns:
-            (can_fit: bool, reason: str)
-        """
-        # Check length
         if x_pos + item.length_m > self.rear["length_m"]:
             return False, f"Exceeds rear trailer length ({self.rear['length_m']}m)"
-        
-        # Check width
         if item.width_m > self.rear["width_m"]:
-            return False, f"Width {item.width_m}m exceeds trailer width {self.rear['width_m']}m"
-        
-        # Check weight capacity
+            return False, f"Width {item.width_m}m exceeds trailer width"
         if self.rear["total_mass_kg"] + item.mass_kg > self.rear["max_payload_kg"]:
-            return False, f"Would exceed rear trailer payload ({self.rear['max_payload_kg']/1000:.0f}t)"
-        
-        # Collision check with existing items
+            return False, f"Would exceed rear trailer payload"
         for existing in self.rear["items"]:
             if (x_pos < existing.x_pos + existing.length_m + gap_m and
                 x_pos + item.length_m + gap_m > existing.x_pos):
-                return False, f"Collision with {existing.consignment} on rear trailer"
-        
+                return False, f"Collision with {existing.consignment}"
         return True, "OK"
     
     def add_item_to_front(self, item, x_pos, y_pos=0.15):
-        """Add item to front trailer"""
         item.x_pos = x_pos
         item.y_pos = y_pos
         item.trailer_section = "front"
         self.front["items"].append(item)
         self.front["total_mass_kg"] += item.mass_kg
         self.total_mass_kg += item.mass_kg
-        
+    
     def add_item_to_rear(self, item, x_pos, y_pos=0.15):
-        """Add item to rear trailer"""
         item.x_pos = x_pos
         item.y_pos = y_pos
         item.trailer_section = "rear"
@@ -304,105 +354,54 @@ class SuperlinkTrailer:
         self.total_mass_kg += item.mass_kg
     
     def calculate_axle_loads(self):
-        """
-        Calculate axle loads for Superlink combination.
-        
-        Returns:
-            (front_axle_load_kg, rear_axle_load_kg, combined_cog_m)
-        """
-        # Simplified calculation based on typical Superlink weight distribution:
-        # - Front trailer axles carry ~30% of front trailer load
-        # - Rear trailer axles carry ~70% of total load
-        # - Kingpin carries the balance
-        
         front_axle_load = self.front["total_mass_kg"] * 0.3
         rear_axle_load = (self.rear["total_mass_kg"] * 0.7) + (self.front["total_mass_kg"] * 0.1)
-        
-        # Combined center of gravity (relative to front of first trailer)
         total_moment = 0
-        
         for item in self.front["items"]:
             cog = item.x_pos + (item.length_m / 2)
             total_moment += item.mass_kg * cog
-            
         for item in self.rear["items"]:
-            # Add articulation gap offset (front trailer length + gap)
             cog = self.front["length_m"] + self.articulation_gap_m + item.x_pos + (item.length_m / 2)
             total_moment += item.mass_kg * cog
-        
         combined_cog = total_moment / self.total_mass_kg if self.total_mass_kg > 0 else 0
-        
         return front_axle_load, rear_axle_load, combined_cog
     
     def is_safe(self):
-        """
-        Check if load is within legal limits.
-        
-        Returns:
-            (is_safe: bool, violations: List[str])
-        """
         violations = []
-        
-        # Check total payload
         if self.total_mass_kg > self.max_payload_kg:
-            violations.append(f"Total payload {self.total_mass_kg/1000:.1f}t exceeds {self.max_payload_kg/1000:.0f}t limit")
-        
-        # Check front trailer
+            violations.append(f"Total payload exceeds {self.max_payload_kg/1000:.0f}t limit")
         if self.front["total_mass_kg"] > self.front["max_payload_kg"]:
-            violations.append(f"Front trailer overload: {self.front['total_mass_kg']/1000:.1f}t > {self.front['max_payload_kg']/1000:.0f}t")
-        
-        # Check rear trailer
+            violations.append(f"Front trailer overload")
         if self.rear["total_mass_kg"] > self.rear["max_payload_kg"]:
-            violations.append(f"Rear trailer overload: {self.rear['total_mass_kg']/1000:.1f}t > {self.rear['max_payload_kg']/1000:.0f}t")
-        
-        # Check axle loads (Regulation 240)
-        front_axle, rear_axle, _ = self.calculate_axle_loads()
-        
-        # Each axle on rear trailer max 9000kg (Reg 240)
-        max_per_axle = 9000
-        axles_on_rear = self.rear.get("axle_count", 3)
-        load_per_axle = rear_axle / axles_on_rear
-        
-        if load_per_axle > max_per_axle:
-            violations.append(f"Rear axle overload: {load_per_axle:.0f}kg per axle > {max_per_axle}kg limit")
-        
+            violations.append(f"Rear trailer overload")
         return len(violations) == 0, violations
     
     def get_all_items(self):
-        """Return all items from both trailers as a flat list"""
         all_items = self.front["items"] + self.rear["items"]
-        self.items = all_items  # Update for compatibility
+        self.items = all_items
         return all_items
     
     def get_summary(self):
-        """Get a summary of the Superlink loading"""
         return {
             "name": self.name,
             "type": self.type_name,
+            "is_triaxle": self.is_triaxle,
             "total_items": len(self.get_all_items()),
             "total_mass_tons": self.total_mass_kg / 1000,
             "max_payload_tons": self.max_payload_kg / 1000,
+            "rear_axle_limit_tons": self.max_rear_axle_kg / 1000,
             "front": {
                 "items": len(self.front["items"]),
-                "mass_tons": self.front["total_mass_kg"] / 1000,
-                "capacity_tons": self.front["max_payload_kg"] / 1000
+                "mass_tons": self.front["total_mass_kg"] / 1000
             },
             "rear": {
                 "items": len(self.rear["items"]),
-                "mass_tons": self.rear["total_mass_kg"] / 1000,
-                "capacity_tons": self.rear["max_payload_kg"] / 1000
-            },
-            "is_safe": self.is_safe()[0]
+                "mass_tons": self.rear["total_mass_kg"] / 1000
+            }
         }
     
     def add_item(self, item, x_pos, y_pos=0.15):
-        """
-        Generic add_item method for compatibility with visualizer.
-        Automatically determines whether to add to front or rear based on x_pos.
-        """
-        # If x_pos is beyond front trailer length, add to rear
         if x_pos > self.front["length_m"] + 0.5:
-            # Adjust position for rear trailer
             rear_x = x_pos - self.front["length_m"] - self.articulation_gap_m
             self.add_item_to_rear(item, rear_x, y_pos)
         else:
@@ -412,63 +411,37 @@ class SuperlinkTrailer:
 # ==================== HELPER FUNCTIONS ====================
 
 def get_trailer(trailer_name):
-    """
-    Return trailer specs by name.
-    
-    Args:
-        trailer_name: One of the keys in TRAILER_TYPES
-        
-    Returns:
-        Trailer specs dictionary or SuperlinkTrailer object
-    """
     if trailer_name not in TRAILER_TYPES:
         return TRAILER_TYPES.get("Flatbed Standard")
-    
     config = TRAILER_TYPES[trailer_name]
-    
     if config.get("is_link"):
         return SuperlinkTrailer(config_type=trailer_name)
-    
     return config
 
 
 def list_trailers():
-    """Return list of available trailer types"""
     return list(TRAILER_TYPES.keys())
 
 
-def list_standard_trailers():
-    """Return list of standard (non-link) trailer types"""
-    return [t for t in TRAILER_TYPES if not TRAILER_TYPES[t].get("is_link", False)]
-
-
-def list_superlink_trailers():
-    """Return list of Superlink/Interlink trailer types"""
-    return [t for t in TRAILER_TYPES if TRAILER_TYPES[t].get("is_link", False)]
-
-
-# ==================== UNIT TEST ====================
-
 if __name__ == "__main__":
-    print("Testing Trailer Library...\n")
+    print("Testing Trailer Library with Tri-Axle...\n")
     
-    # Test 1: Standard trailer
-    print("TEST 1: Standard Flatbed")
-    flatbed = get_trailer("Flatbed Standard")
-    print(f"   Type: {flatbed['type']}")
-    print(f"   Length: {flatbed['length_m']}m")
-    print(f"   Payload: {flatbed['max_payload_kg']/1000:.0f}t")
+    # Test Tri-Axle Flatbed
+    print("TEST: Tri-Axle Flatbed")
+    triaxle = TRAILER_TYPES["Tri-Axle Flatbed"]
+    print(f"   Length: {triaxle['length_m']}m")
+    print(f"   Payload: {triaxle['max_payload_kg']/1000:.0f}t")
+    print(f"   Rear Axle Limit: {triaxle['max_rear_axle_kg']/1000:.0f}t (tri-axle group)")
+    print(f"   Axle Config: {triaxle['axle_configuration']}")
     print("   ✓ Passed\n")
     
-    # Test 2: Superlink
-    print("TEST 2: Superlink (6m + 12m)")
-    superlink = SuperlinkTrailer(name="Test_Superlink", config_type="Superlink (6m + 12m)")
-    print(f"   Type: {superlink.type_name}")
-    print(f"   Front length: {superlink.front['length_m']}m, max: {superlink.front['max_payload_kg']/1000:.0f}t")
-    print(f"   Rear length: {superlink.rear['length_m']}m, max: {superlink.rear['max_payload_kg']/1000:.0f}t")
-    print(f"   Total payload: {superlink.max_payload_kg/1000:.0f}t")
-    print(f"   Wheelbase (property): {superlink.wheelbase_m}m")
-    print(f"   Tare weight (property): {superlink.trailer_tare_kg}kg")
+    # Test Tri-Axle Superlink
+    print("TEST: Tri-Axle Superlink")
+    superlink_tri = SuperlinkTrailer(config_type="Tri-Axle Superlink")
+    print(f"   Type: {superlink_tri.type_name}")
+    print(f"   Is Tri-Axle: {superlink_tri.is_triaxle}")
+    print(f"   Rear Axle Limit: {superlink_tri.max_rear_axle_kg/1000:.0f}t")
+    print(f"   Rear Axle Count: {superlink_tri.rear['axle_count']}")
     print("   ✓ Passed\n")
     
     print("✅ All tests passed!")

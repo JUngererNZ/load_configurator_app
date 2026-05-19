@@ -18,6 +18,44 @@ from visualizer_2d import create_top_down_view, create_side_view
 from exporter import export_manifest, print_loading_instructions
 from trailer_library import SuperlinkTrailer, TRAILER_TYPES
 
+# Replace the available trailer types section with:
+
+print("\n   Available trailer types:")
+print("   1. Flatbed Standard (13.6m, 28t payload, 2 axles)")
+print("   2. Low-Loader (13.6m, 35t payload, 2 axles)")
+print("   3. TRI-AXLE Flatbed (13.6m, 30t payload, 3 axles)")  # NEW
+print("   4. TRI-AXLE Low-Loader (13.6m, 35t payload, 3 axles)")  # NEW
+print("   5. Abnormal (18.0m, 50t payload, requires permit)")
+print("   6. SUPERLINK (6m + 12m, 34t payload)")
+print("   7. SUPERLINK Tri-Axle (6m + 12m tri-axle rear, 34t)")  # NEW
+print("   8. INTERLINK (6m + 6m, 34t payload)")
+
+choice = input("\n   Select (1-8) [default: 1]: ").strip()
+
+if choice == "2":
+    trailer_type = "Low-Loader"
+    is_superlink = False
+elif choice == "3":
+    trailer_type = "Tri-Axle Flatbed"
+    is_superlink = False
+elif choice == "4":
+    trailer_type = "Tri-Axle Low-Loader"
+    is_superlink = False
+elif choice == "5":
+    trailer_type = "Abnormal (Extendable)"
+    is_superlink = False
+elif choice == "6":
+    trailer_type = "Superlink (6m + 12m)"
+    is_superlink = True
+elif choice == "7":
+    trailer_type = "Tri-Axle Superlink"
+    is_superlink = True
+elif choice == "8":
+    trailer_type = "Interlink (6m + 6m)"
+    is_superlink = True
+else:
+    trailer_type = "Flatbed Standard"
+    is_superlink = False
 
 def find_input_file():
     """Automatically find the consignment file in current directory"""
