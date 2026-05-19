@@ -146,6 +146,27 @@ TRAILER_TYPES = {
 
 # ==================== SUPERLINK TRAILER CLASS ====================
 
+    # Add these properties to SuperlinkTrailer class
+    @property
+    def wheelbase_m(self):
+        """Return effective wheelbase for Superlink"""
+        return 10.5  # Standard wheelbase for compliance calculations
+    
+    @property
+    def max_kingpin_kg(self):
+        """Return kingpin limit for Superlink"""
+        return 12000
+    
+    @property
+    def max_rear_axle_kg(self):
+        """Return rear axle limit for Superlink"""
+        return 18000
+    
+    @property
+    def deck_height_m(self):
+        """Return deck height"""
+        return 1.2
+
 class SuperlinkTrailer:
     """
     Superlink (Link) Trailer - Two trailers articulated together

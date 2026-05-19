@@ -1,0 +1,11 @@
+Trailer,Trailer_Type,Loading_Step,Consignment,Mass_kg,Mass_t,Length_m,Width_m,Height_m,X_Position_m,Y_Position_m,Rotated_90deg,Front_Axle_Load_kg,Rear_Axle_Load_kg,Safety_Status,Violations,Cargo_Classification,OOG_Reasons,Commercial_Note
+Superlink_1,Superlink (6m + 12m),1,DE850E0,6690.0,6.69,5.572,2.17,2.398,0.2,0.15,False,2007.0,6630.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_1,Superlink (6m + 12m),2,DE450E0,4707.0,4.71,4.93,1.66,2.32,0.2,0.15,False,2007.0,6630.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_1,Superlink (6m + 12m),3,DE500GC,3808.0,3.81,4.77,1.63,2.36,5.33,0.15,False,2007.0,6630.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_2,Superlink (6m + 12m),4,DE220GC,1880.0,1.88,3.38,1.17,1.85,0.2,0.15,False,1152.0,4759.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_2,Superlink (6m + 12m),5,DE65GC,980.0,0.98,0.96,2.33,1.5,3.78,0.15,False,1152.0,4759.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_2,Superlink (6m + 12m),6,DE65GC,980.0,0.98,0.96,2.33,1.5,4.94,0.15,False,1152.0,4759.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_2,Superlink (6m + 12m),7,DE220GC,1880.0,1.88,3.38,1.17,1.85,0.2,0.15,False,1152.0,4759.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_2,Superlink (6m + 12m),8,DE220GC,1880.0,1.88,3.38,1.17,1.85,3.78,0.15,False,1152.0,4759.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_2,Superlink (6m + 12m),9,DE110E2,1510.0,1.51,2.77,1.12,1.63,7.36,0.15,False,1152.0,4759.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
+Superlink_2,Superlink (6m + 12m),10,DE65GC,980.0,0.98,0.96,2.33,1.5,10.33,0.15,False,1152.0,4759.0,PASS,None,IN-GAUGE,,✅ Standard rates apply. Can use any standard flatbed fleet.
